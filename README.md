@@ -1,0 +1,67 @@
+## insuranceAPP
+### 技术栈
+- 前端：Flutter(三端互通：IOS、Android、Web统一开发)
+- 后端：python FastAPI
+- 数据库：PostgreSQL
+- 部署：Docker
+- 包管理工具：uv
+### 前端页面设计
+- **登录页**
+    - 具体参考![登录页设计](./Design/login_page.png)
+    - 采用经典的基础页面设计
+    - 顶部为logo,logo下方为账号、密码输入框；密码输入框有密码显示隐藏按钮
+    - 输入框下方左侧有持久化勾选框，勾选后下次登录时无需再次输入账号密码
+    - 输入框下方右侧有忘记密码按钮，点击转至忘记密码模式
+        - 忘记密码模式包含logo、账号、新密码、重置密码按钮（暂时不添加验证信息）
+    - 再下方为登录按钮（暂不支持通过其他方式登录）
+    - 页面底部为没有账号时的注册按钮，点击转至注册模式
+        - 注册模式同样包含logo、账号、密码、确认密码、注册按钮
+        - 注册模式自动检测密码和确认密码是否一致，不一致时提示
+    - 具有账号密码错误时的提示，输入框变为红色
+    - 登录成功后转至首页
+### 后端API
+- 登录API
+    - 请求方式：POST
+    - 请求路径：/login
+    - 请求参数：
+        - account: 账号
+        - password: 密码
+    - 后端根据账号密码判断是否登录成功
+    - 返回体：
+        - code:状态码
+        - token: JWT token
+        - user_id: 用户ID
+        - message: 登录成功或失败信息
+    - 登录成功后，将token和user_id返回给前端
+    - 登录失败后，返回错误信息
+- 注册API
+    - 请求方式：POST
+    - 请求路径：/register
+    - 请求参数：
+        - account: 账号
+        - password: 密码
+    - 后端将账号和密码储存到数据库中,并使用账号为用户生成user_id
+    - 返回体：
+        - code:状态码
+        - message: 注册成功或失败信息
+        - token: JWT token
+        - user_id: 用户ID
+- 忘记密码API
+    - 请求方式：POST
+    - 请求路径：/reset_password
+    - 请求参数：
+        - account: 账号
+        - new_password: 新密码
+    - 后端根据账号和新密码更新数据库中密码
+    - 返回体：
+        - code:状态码
+        - message: 重置密码成功或失败信息
+        - token: JWT token
+        - user_id: 用户ID
+### 后端数据库
+- 目前先采用postgresql数据库
+- 数据库表结构
+    - 用户表
+        - user_id: 用户ID
+        - account: 账号
+        - password: 密码
