@@ -18,8 +18,6 @@ class MenuPage extends StatefulWidget {
 class _MenuPageState extends State<MenuPage> {
   // 当前选中的AI模块
   AIModule? _selectedModule;
-  // 当前选中的会话ID
-  String? _selectedConversationId;
   // 是否加载中
   bool _isLoading = true;
   // 是否已加载会话列表
@@ -53,18 +51,11 @@ class _MenuPageState extends State<MenuPage> {
       if (chatService.isInitialized) {
         _selectedModule = chatService.selectedModule;
         
-        // 如果尚未加载会话列表，手动加载一次
-        if (!_hasLoadedConversations) {
-          if (_selectedModule != null) {
-            debugPrint('===> MenuPage: 初始化时加载会话列表');
-            await chatService.loadConversations();
-            _hasLoadedConversations = true;
-          }
-        }
-        
-        // 如果有会话，选择第一个
-        if (chatService.conversations.isNotEmpty) {
-          _selectedConversationId = chatService.conversations.first.id;
+        // 在菜单页面加载会话列表，无论是否已经加载过，确保列表是最新的
+        if (_selectedModule != null) {
+          debugPrint('===> MenuPage: 加载会话列表');
+          await chatService.loadConversations();
+          _hasLoadedConversations = true;
         }
       } else {
         // 首次初始化
@@ -74,12 +65,12 @@ class _MenuPageState extends State<MenuPage> {
         // ChatService初始化完成后更新状态
         _selectedModule = chatService.selectedModule;
         
-        // 选择第一个会话
-        if (chatService.conversations.isNotEmpty) {
-          _selectedConversationId = chatService.conversations.first.id;
+        // 在菜单页面显式加载会话列表
+        if (_selectedModule != null) {
+          debugPrint('===> MenuPage: 首次初始化后加载会话列表');
+          await chatService.loadConversations();
+          _hasLoadedConversations = true;
         }
-        
-        _hasLoadedConversations = true;
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -94,10 +85,6 @@ class _MenuPageState extends State<MenuPage> {
   
   // 选择会话
   void _selectConversation(String conversationId) {
-    setState(() {
-      _selectedConversationId = conversationId;
-    });
-    
     // 跳转到首页（第一个标签是对话页面）
     Navigator.pushReplacementNamed(
       context, 
@@ -109,25 +96,18 @@ class _MenuPageState extends State<MenuPage> {
   // 选择AI模块
   void _selectAIModule(AIModule module) async {
     final chatService = Provider.of<ChatService>(context, listen: false);
-    // final bool isSameModule = _selectedModule?.apiKey == module.apiKey;
+    final bool isSameModule = _selectedModule?.apiKey == module.apiKey;
     
     setState(() {
       _isLoading = true;
       _selectedModule = module;
-      _selectedConversationId = null;
     });
     
     try {
-      // 选择AI模块并确保加载会话列表
+      // 选择AI模块，并始终加载该模块的会话列表（菜单页面始终需要显示会话列表）
+      // 即使是同一个模块，也重新加载一次会话列表，确保数据是最新的
       await chatService.selectAIModule(module, shouldLoadConversations: true);
       _hasLoadedConversations = true;
-      
-      // 如果有会话，选择第一个
-      if (chatService.conversations.isNotEmpty) {
-        setState(() {
-          _selectedConversationId = chatService.conversations.first.id;
-        });
-      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('选择AI模块失败: $e')),
@@ -323,7 +303,6 @@ class _MenuPageState extends State<MenuPage> {
                     final conversation = chatService.conversations[index];
                     return ConversationItem(
                       conversation: conversation,
-                      isSelected: conversation.id == _selectedConversationId,
                       onTap: () => _selectConversation(conversation.id),
                       onDelete: () => chatService.deleteConversation(conversation.id),
                       onRename: () => showDialog(

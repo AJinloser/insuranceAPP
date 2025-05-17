@@ -33,16 +33,12 @@ class ConversationItem extends StatelessWidget {
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 8),
-      color: isSelected 
-          ? const Color(0xFFEDE7F6) // 浅紫色背景表示选中状态
-          : Colors.white,
+      color: Colors.white, // 始终使用白色背景，不再根据isSelected改变
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: isSelected 
-              ? primaryColor 
-              : Colors.grey.withAlpha(51),
-          width: isSelected ? 2 : 1,
+          color: Colors.grey.withAlpha(51), // 始终使用灰色边框，不再根据isSelected改变
+          width: 1, // 统一边框宽度为1
         ),
       ),
       child: InkWell(

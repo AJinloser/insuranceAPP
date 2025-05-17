@@ -71,7 +71,8 @@ class ChatService with ChangeNotifier {
     await _loadAIModules();
     
     if (_aiModules.isNotEmpty) {
-      await selectAIModule(_aiModules.first, shouldLoadConversations: true);
+      // 只选择模块，不加载会话列表，提高加载速度
+      await selectAIModule(_aiModules.first, shouldLoadConversations: false);
     }
     
     _isInitialized = true;
@@ -236,7 +237,7 @@ class ChatService with ChangeNotifier {
   }
   
   /// 选择AI模块
-  Future<void> selectAIModule(AIModule module, {bool shouldLoadConversations = true}) async {
+  Future<void> selectAIModule(AIModule module, {bool shouldLoadConversations = false}) async {
     final bool isSameModule = _selectedModule?.apiKey == module.apiKey;
     if (isSameModule && shouldLoadConversations == false) return;
     
@@ -250,7 +251,7 @@ class ChatService with ChangeNotifier {
       _messages = [];
       _suggestedQuestions = [];
       
-      // 加载会话列表
+      // 只有在明确需要时才加载会话列表（例如进入菜单页面时）
       if (shouldLoadConversations) {
         await loadConversations();
       }
@@ -330,11 +331,19 @@ class ChatService with ChangeNotifier {
         userId: _userId,
       );
       
+      // 对获取到的历史消息进行反转，使其按照时间顺序（从旧到新）排列
+      // 因为DifyAPI返回的历史消息是倒序的（最新的在前面）
+      _messages = _messages.reversed.toList();
+      
       for (var message in _messages) {
         debugPrint('===> 加载消息历史: ${message.query}');
       }
       for (var message in _messages) {
         debugPrint('===> 加载消息历史: ${message.answer}');
+        // 打印反馈信息，便于调试
+        if (message.feedback != null) {
+          debugPrint('===> 消息反馈状态: ${message.id}, rating=${message.feedback?.rating}');
+        }
       }
       
       // 确保已加载parameters再检查建议问题开关
@@ -345,7 +354,7 @@ class ChatService with ChangeNotifier {
       // 加载最后一条消息的建议问题
       if (_messages.isNotEmpty && 
           _selectedModule?.parameters?.suggestedQuestionsAfterAnswer?.enabled == true) {
-        await loadSuggestedQuestions(_messages.first.id);
+        await loadSuggestedQuestions(_messages.last.id);
       }
       
       notifyListeners();

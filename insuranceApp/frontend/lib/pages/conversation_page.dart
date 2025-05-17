@@ -252,6 +252,7 @@ class _ConversationPageState extends State<ConversationPage> {
     return Consumer<ChatService>(
       builder: (context, chatService, child) {
         final messages = chatService.messages;
+        final suggestedQuestions = chatService.suggestedQuestions;
         
         if (messages.isEmpty) {
           return _buildWelcomeView(chatService);
@@ -274,7 +275,7 @@ class _ConversationPageState extends State<ConversationPage> {
             // 由于ListView是reverse: true，所以需要先添加AI回答消息，再添加用户问题消息
             // 这样在显示时，用户问题会在上面，AI回答会在下面
             
-            // 先添加AI回答消息
+            // AI回复消息，需要正确传递feedback状态
             messageWidgets.add(
               ChatMessageItem(
                 message: ChatMessage(
@@ -283,7 +284,7 @@ class _ConversationPageState extends State<ConversationPage> {
                   query: null, // 确保问题为空，这样ChatMessageItem会将其识别为AI消息
                   answer: message.answer,
                   messageFiles: message.messageFiles,
-                  feedback: message.feedback,
+                  feedback: message.feedback, // 保留原始消息的feedback状态
                   retrieverResources: message.retrieverResources,
                   createdAt: message.createdAt,
                 ),
@@ -293,7 +294,12 @@ class _ConversationPageState extends State<ConversationPage> {
               ),
             );
             
-            // 再添加用户问题消息
+            // 如果是最后一条消息且有建议问题，显示建议问题
+            if (isLastMessage && !chatService.isSending && suggestedQuestions.isNotEmpty) {
+              messageWidgets.add(_buildSuggestedQuestions(suggestedQuestions));
+            }
+            
+            // 用户问题消息
             messageWidgets.add(
               ChatMessageItem(
                 message: ChatMessage(
@@ -319,6 +325,12 @@ class _ConversationPageState extends State<ConversationPage> {
                 onFeedback: _sendFeedback,
               ),
             );
+            
+            // 如果是最后一条AI回复消息且不是正在发送状态，显示建议问题
+            if (isLastMessage && message.answer != null && message.answer!.isNotEmpty && 
+                !chatService.isSending && suggestedQuestions.isNotEmpty) {
+              messageWidgets.add(_buildSuggestedQuestions(suggestedQuestions));
+            }
           }
         }
         
@@ -460,6 +472,57 @@ class _ConversationPageState extends State<ConversationPage> {
           ),
         );
       },
+    );
+  }
+  
+  // 构建建议问题UI
+  Widget _buildSuggestedQuestions(List<String> questions) {
+    return Container(
+      padding: const EdgeInsets.only(left: 60, top: 8, bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0, left: 8.0),
+            child: Text(
+              '你可能想问：',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Wrap(
+            spacing: 8.0,
+            runSpacing: 8.0,
+            children: questions.map((question) {
+              return InkWell(
+                onTap: () {
+                  _messageController.text = question;
+                  _sendMessage();
+                },
+                borderRadius: BorderRadius.circular(18),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEDE7F6), // 浅紫色背景
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xFF6A1B9A).withOpacity(0.2)),
+                  ),
+                  child: Text(
+                    question,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF6A1B9A), // 紫色文字
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 } 
