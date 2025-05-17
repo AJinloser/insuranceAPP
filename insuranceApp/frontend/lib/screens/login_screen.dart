@@ -28,9 +28,9 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _hasError = false;
   LoginMode _mode = LoginMode.login;
 
-  // 主题色定义，根据设计图配色
-  final Color _primaryColor = const Color(0xFF1976D2); // 蓝色主题
-  final Color _backgroundColor = const Color(0xFFF5F5F5); // 浅灰色背景
+  // 定义颜色
+  final Color _primaryColor = const Color(0xFF6A1B9A); // 紫色主题
+  final Color _backgroundColor = Colors.white; // 白色背景
   final Color _cardColor = Colors.white; // 白色卡片
 
   @override

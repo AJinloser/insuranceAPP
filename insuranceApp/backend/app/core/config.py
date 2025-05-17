@@ -1,5 +1,6 @@
 import os
-from typing import Any, Dict, Optional
+import json
+from typing import Any, Dict, Optional, List
 
 from dotenv import load_dotenv
 from pydantic import PostgresDsn, field_validator
@@ -7,6 +8,17 @@ from pydantic_settings import BaseSettings
 
 # 加载环境变量
 load_dotenv()
+print("====> 加载.env文件完成")
+
+# 直接查看环境变量中的AI_MODULE_KEYS
+# ai_module_keys_env = os.getenv("AI_MODULE_KEYS", "{}")
+# print(f"====> 环境变量中的AI_MODULE_KEYS: {ai_module_keys_env}")
+
+# try:
+#     parsed_keys = json.loads(ai_module_keys_env)
+#     print(f"====> 解析后的AI_MODULE_KEYS: {parsed_keys}")
+# except json.JSONDecodeError as e:
+#     print(f"====> 解析AI_MODULE_KEYS失败: {e}")
 
 
 class Settings(BaseSettings):
@@ -17,8 +29,12 @@ class Settings(BaseSettings):
 
     # JWT配置
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your_secret_key_here")
+    print(f"====> 原始SECRET_KEY环境变量: {SECRET_KEY}")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
+    # AI模块API密钥
+    AI_MODULE_KEYS: List[str] = os.getenv("AI_MODULE_KEYS", "[]")
 
     # 数据库配置
     DATABASE_URL: Optional[PostgresDsn] = None
@@ -41,4 +57,5 @@ class Settings(BaseSettings):
         case_sensitive = True
 
 
-settings = Settings() 
+settings = Settings()
+print(f"====> 配置加载完成，AI_MODULE_KEYS: {settings.AI_MODULE_KEYS}") 

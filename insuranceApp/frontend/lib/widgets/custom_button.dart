@@ -7,6 +7,7 @@ class CustomButton extends StatelessWidget {
   final bool isFullWidth;
   final Color? backgroundColor;
   final Color? textColor;
+  final IconData? icon;
 
   const CustomButton({
     Key? key,
@@ -16,15 +17,18 @@ class CustomButton extends StatelessWidget {
     this.isFullWidth = true,
     this.backgroundColor,
     this.textColor,
+    this.icon,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final Color buttonColor = backgroundColor ?? const Color(0xFF1976D2);
+    final Color buttonColor = backgroundColor ?? const Color(0xFF6A1B9A);
     
-    return SizedBox(
-      width: isFullWidth ? double.infinity : null,
-      height: 52.0,
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: isFullWidth ? double.maxFinite : 200.0,
+        minHeight: 52.0,
+      ),
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
@@ -35,7 +39,7 @@ class CustomButton extends StatelessWidget {
           ),
           elevation: 3.0,
           shadowColor: buttonColor.withOpacity(0.5),
-          padding: const EdgeInsets.symmetric(vertical: 12.0),
+          padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
         ),
         child: isLoading
             ? const SizedBox(
@@ -46,13 +50,23 @@ class CustomButton extends StatelessWidget {
                   strokeWidth: 2.0,
                 ),
               )
-            : Text(
-                text,
-                style: const TextStyle(
-                  fontSize: 18.0,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.0,
-                ),
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, size: 20.0),
+                    const SizedBox(width: 8.0),
+                  ],
+                  Text(
+                    text,
+                    style: const TextStyle(
+                      fontSize: 18.0,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ],
               ),
       ),
     );

@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.auth import router as auth_router
+from app.api.ai_modules import router as ai_modules_router
 from app.core.config import settings
 from app.db.base import Base, engine
 
@@ -37,6 +38,7 @@ app.add_middleware(
 
 # 注册路由
 app.include_router(auth_router, prefix="/api/v1", tags=["认证"])
+app.include_router(ai_modules_router, prefix="/api/v1", tags=["AI模块"])
 
 
 @app.get("/api/health")

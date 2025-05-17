@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>保险理财咨询</title>
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script>tailwind.config={theme:{extend:{colors:{primary:'#8E6FF7',secondary:'#F8F5FF'},borderRadius:{'none':'0px','sm':'4px',DEFAULT:'8px','md':'12px','lg':'16px','xl':'20px','2xl':'24px','3xl':'32px','full':'9999px','button':'8px'}}}}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
+<style>
+:where([class^="ri-"])::before { content: "\f3c2"; }
+body {
+font-family: 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+background-color: #FFFFFF;
+height: 100vh;
+width: 375px;
+margin: 0 auto;
+position: relative;
+}
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+-webkit-appearance: none;
+margin: 0;
+}
+.chat-container {
+padding-bottom: 80px;
+padding-top: 60px;
+}
+.message-user {
+background-color: #F3F4F6;
+border-radius: 18px 18px 18px 4px;
+max-width: 80%;
+margin-left: 12px;
+margin-right: auto;
+}
+.message-ai {
+background-color: rgba(142, 111, 247, 0.1);
+border-radius: 18px 18px 4px 18px;
+max-width: 80%;
+margin-right: 12px;
+margin-left: auto;
+}
+.quick-question {
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+}
+</style>
+</head>
+<body class="text-gray-800">
+<!-- 顶部导航栏 -->
+<div class="fixed top-0 w-full bg-white z-50 border-b border-gray-100 shadow-sm">
+<div class="flex items-center justify-between px-4 h-14">
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 flex items-center justify-center cursor-pointer" id="historyBtn">
+<i class="ri-history-line ri-lg"></i>
+</div>
+<div class="text-xl font-['Pacifico'] text-primary">logo</div>
+</div>
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 flex items-center justify-center cursor-pointer" id="modelBtn">
+<i class="ri-robot-line ri-lg"></i>
+</div>
+<div class="w-8 h-8 flex items-center justify-center">
+<i class="ri-notification-3-line ri-lg"></i>
+</div>
+</div>
+</div>
+</div>
+<!-- 历史对话弹窗 -->
+<div id="historyModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+<div class="bg-white w-full h-[80vh] absolute bottom-0 rounded-t-2xl">
+<div class="p-4 border-b border-gray-100">
+<div class="flex justify-between items-center">
+<h3 class="text-lg font-medium">历史对话</h3>
+<div class="w-8 h-8 flex items-center justify-center cursor-pointer" onclick="toggleHistory()">
+<i class="ri-close-line ri-lg"></i>
+</div>
+</div>
+</div>
+<div class="p-4 space-y-4 overflow-auto h-[calc(80vh-60px)]">
+<div class="border border-gray-100 rounded-lg p-3 cursor-pointer">
+<div class="flex justify-between items-center">
+<span class="text-sm">重疾险咨询</span>
+<span class="text-xs text-gray-400">2025-05-14</span>
+</div>
+<p class="text-xs text-gray-500 mt-1 line-clamp-2">讨论了康惠保旗舰版和超越保2023的保障方案...</p>
+</div>
+<div class="border border-gray-100 rounded-lg p-3 cursor-pointer">
+<div class="flex justify-between items-center">
+<span class="text-sm">养老规划</span>
+<span class="text-xs text-gray-400">2025-05-13</span>
+</div>
+<p class="text-xs text-gray-500 mt-1 line-clamp-2">制定了包含社保、商业保险和投资理财的养老方案...</p>
+</div>
+</div>
+</div>
+</div>
+<!-- 模型选择弹窗 -->
+<div id="modelModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+<div class="bg-white w-full h-[60vh] absolute bottom-0 rounded-t-2xl">
+<div class="p-4 border-b border-gray-100">
+<div class="flex justify-between items-center">
+<h3 class="text-lg font-medium">选择模型</h3>
+<div class="w-8 h-8 flex items-center justify-center cursor-pointer" onclick="toggleModel()">
+<i class="ri-close-line ri-lg"></i>
+</div>
+</div>
+</div>
+<div class="p-4 space-y-4">
+<div class="border border-primary bg-secondary rounded-lg p-4 cursor-pointer">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<div class="w-10 h-10 flex items-center justify-center bg-primary bg-opacity-10 rounded-lg">
+<i class="ri-ai-generate ri-lg text-primary"></i>
+</div>
+<div>
+<h4 class="font-medium">AI 保险顾问</h4>
+<p class="text-xs text-gray-500 mt-1">专业解答保险相关问题</p>
+</div>
+</div>
+<i class="ri-check-line ri-lg text-primary"></i>
+</div>
+</div>
+<div class="border border-gray-100 rounded-lg p-4 cursor-pointer">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-3">
+<div class="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-lg">
+<i class="ri-customer-service-2-line ri-lg text-gray-400"></i>
+</div>
+<div>
+<h4 class="font-medium">人工客服</h4>
+<p class="text-xs text-gray-500 mt-1">工作时间 9:00-21:00</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 主内容区域 -->
+<div class="chat-container pb-20">
+<!-- 常见问题区域 -->
+<div class="px-4 py-3">
+<h3 class="text-sm font-medium mb-2">快速提问</h3>
+<div class="flex items-center overflow-x-auto pb-2 space-x-3">
+<div class="flex-shrink-0 bg-white border border-gray-200 rounded-full px-4 py-2 shadow-sm cursor-pointer">
+<span class="quick-question text-sm">重疾险推荐</span>
+</div>
+<div class="flex-shrink-0 bg-white border border-gray-200 rounded-full px-4 py-2 shadow-sm cursor-pointer">
+<span class="quick-question text-sm">医疗险对比</span>
+</div>
+<div class="flex-shrink-0 bg-white border border-gray-200 rounded-full px-4 py-2 shadow-sm cursor-pointer">
+<span class="quick-question text-sm">养老规划建议</span>
+</div>
+<div class="flex-shrink-0 bg-white border border-gray-200 rounded-full px-4 py-2 shadow-sm cursor-pointer">
+<span class="quick-question text-sm">子女教育金</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-3 mt-3">
+<div class="bg-gray-50 rounded-lg p-3 cursor-pointer">
+<div class="flex items-center space-x-2">
+<i class="ri-question-line text-primary"></i>
+<span class="text-sm">如何选择保险</span>
+</div>
+<p class="text-xs text-gray-500 mt-1">了解保险选择的关键因素</p>
+</div>
+<div class="bg-gray-50 rounded-lg p-3 cursor-pointer">
+<div class="flex items-center space-x-2">
+<i class="ri-file-list-3-line text-primary"></i>
+<span class="text-sm">理赔指南</span>
+</div>
+<p class="text-xs text-gray-500 mt-1">保险理赔流程及注意事项</p>
+</div>
+</div>
+</div>
+<!-- 对话内容区域 -->
+<div class="space-y-4 px-4 pt-2">
+<!-- AI 欢迎消息 -->
+<div class="flex flex-col items-end">
+<div class="message-ai p-3">
+<p class="text-sm">您好！我是您的智能保险顾问。我可以帮您：</p>
+<ul class="text-sm list-disc pl-5 mt-1">
+<li>推荐适合您的保险产品</li>
+<li>解析保单条款</li>
+<li>制定个性化理财规划</li>
+</ul>
+<p class="text-sm mt-1">请问有什么可以帮助您的？</p>
+</div>
+<span class="text-xs text-gray-500 mt-1 mr-2">10:30</span>
+</div>
+<!-- 用户消息 -->
+<div class="flex flex-col items-start">
+<div class="message-user p-3">
+<p class="text-sm">我想了解一下重疾险，预算 5000 元/年，35 岁，有什么推荐？</p>
+</div>
+<span class="text-xs text-gray-500 mt-1 ml-2">10:31</span>
+</div>
+<!-- AI 回复 -->
+<div class="flex flex-col items-end">
+<div class="message-ai p-3">
+<p class="text-sm">根据您的情况，我为您推荐以下重疾险产品：</p>
+<!-- 产品推荐卡片 -->
+<div class="bg-white rounded-lg shadow-sm mt-2 mb-2 cursor-pointer">
+<div class="p-3">
+<div class="flex items-center justify-between">
+<h3 class="font-medium text-sm">康惠保旗舰版</h3>
+<span class="text-xs px-2 py-1 bg-green-50 text-green-600 rounded-full">高性价比</span>
+</div>
+<div class="flex justify-between items-center mt-2">
+<div>
+<p class="text-xs text-gray-500">保障期限：终身</p>
+<p class="text-xs text-gray-500">保障疾病：120种</p>
+</div>
+<div class="text-primary text-sm font-medium">4,680 元/年</div>
+</div>
+</div>
+</div>
+<div class="bg-white rounded-lg shadow-sm mb-2 cursor-pointer">
+<div class="p-3">
+<div class="flex items-center justify-between">
+<h3 class="font-medium text-sm">超越保2023</h3>
+<span class="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded-full">高保障</span>
+</div>
+<div class="flex justify-between items-center mt-2">
+<div>
+<p class="text-xs text-gray-500">保障期限：30年</p>
+<p class="text-xs text-gray-500">保障疾病：100种</p>
+</div>
+<div class="text-primary text-sm font-medium">5,120 元/年</div>
+</div>
+</div>
+</div>
+<p class="text-sm">您可以点击产品卡片查看详情，或者告诉我您关注的具体保障需求，我可以提供更精准的建议。</p>
+</div>
+<span class="text-xs text-gray-500 mt-1 mr-2">10:32</span>
+</div>
+<!-- 用户消息 -->
+<div class="flex flex-col items-start">
+<div class="message-user p-3">
+<p class="text-sm">我更关注癌症保障，第一个产品具体赔付比例是多少？</p>
+</div>
+<span class="text-xs text-gray-500 mt-1 ml-2">10:33</span>
+</div>
+<!-- AI 回复 -->
+<div class="flex flex-col items-end">
+<div class="message-ai p-3">
+<p class="text-sm">康惠保旗舰版对癌症的保障如下：</p>
+<ul class="text-sm list-disc pl-5 mt-1">
+<li>轻症癌症：基本保额的30%，最多赔付3次</li>
+<li>重症癌症：基本保额的100%</li>
+<li>特定癌症额外赔付：基本保额的50%</li>
+</ul>
+<p class="text-sm mt-2">以100万保额计算，重症癌症最高可获赔150万。</p>
+<p class="text-sm mt-2">您是否需要我为您进行一次完整的保险规划评估？这样可以更全面地了解您的保障需求。</p>
+</div>
+<span class="text-xs text-gray-500 mt-1 mr-2">10:34</span>
+</div>
+</div>
+</div>
+<!-- 底部输入区域 -->
+<div class="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-100 px-4 py-3">
+<div class="flex items-center">
+<div class="w-10 h-10 flex items-center justify-center cursor-pointer">
+<i class="ri-mic-line ri-lg text-gray-500"></i>
+</div>
+<div class="flex-1 mx-2">
+<input type="text" placeholder="输入您的问题..." class="w-full py-2 px-3 border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+</div>
+<div class="w-10 h-10 flex items-center justify-center cursor-pointer">
+<i class="ri-image-add-line ri-lg text-gray-500"></i>
+</div>
+<div class="w-10 h-10 flex items-center justify-center cursor-pointer">
+<i class="ri-send-plane-fill ri-lg text-primary"></i>
+</div>
+</div>
+</div>
+<!-- 底部标签栏 -->
+<div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 h-16">
+<div class="grid grid-cols-4 h-full">
+<div class="flex flex-col items-center justify-center cursor-pointer">
+<div class="w-6 h-6 flex items-center justify-center">
+<i class="ri-home-5-fill ri-lg text-primary"></i>
+</div>
+<span class="text-xs text-primary mt-1">首页</span>
+</div>
+<div class="flex flex-col items-center justify-center cursor-pointer">
+<a href="https://readdy.ai/home/485c669b-7dcf-485d-bedc-47e9c6b5a8da/87204710-8b07-4d4e-8118-e0441117ba96" data-readdy="true" class="w-6 h-6 flex items-center justify-center">
+<i class="ri-shield-star-line ri-lg text-gray-400"></i>
+</a>
+<span class="text-xs text-gray-400 mt-1">保险</span>
+</div>
+<div class="flex flex-col items-center justify-center cursor-pointer">
+<div class="w-6 h-6 flex items-center justify-center">
+<i class="ri-funds-line ri-lg text-gray-400"></i>
+</div>
+<span class="text-xs text-gray-400 mt-1">规划</span>
+</div>
+<div class="flex flex-col items-center justify-center cursor-pointer">
+<div class="w-6 h-6 flex items-center justify-center">
+<i class="ri-user-3-line ri-lg text-gray-400"></i>
+</div>
+<span class="text-xs text-gray-400 mt-1">我的</span>
+</div>
+</div>
+</div>
+<script>
+// 将函数声明提升到全局作用域
+function toggleHistory() {
+  const historyModal = document.getElementById('historyModal');
+  historyModal.classList.toggle('hidden');
+}
+
+function toggleModel() {
+  const modelModal = document.getElementById('modelModal');
+  modelModal.classList.toggle('hidden');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+const historyBtn = document.getElementById('historyBtn');
+const modelBtn = document.getElementById('modelBtn');
+const historyModal = document.getElementById('historyModal');
+const modelModal = document.getElementById('modelModal');
+
+historyBtn.addEventListener('click', toggleHistory);
+modelBtn.addEventListener('click', toggleModel);
+// 点击模态框外部关闭
+historyModal.addEventListener('click', function(e) {
+  if (e.target === this) {
+    toggleHistory();
+  }
+});
+
+modelModal.addEventListener('click', function(e) {
+  if (e.target === this) {
+    toggleModel();
+  }
+});
+// 处理快速问题点击
+const quickQuestions = document.querySelectorAll('.quick-question');
+quickQuestions.forEach(question => {
+question.parentElement.addEventListener('click', function() {
+const questionText = question.textContent;
+addUserMessage(questionText);
+// 模拟AI回复
+setTimeout(() => {
+if (questionText === '重疾险推荐') {
+addAIMessage('根据大数据分析，35-45岁人群最适合配置的重疾险有以下几款：<br><br>1. 康惠保旗舰版（推荐指数：⭐⭐⭐⭐⭐）<br>2. 超越保2023（推荐指数：⭐⭐⭐⭐）<br>3. 健康一生2.0（推荐指数：⭐⭐⭐⭐）<br><br>您想了解哪一款的详细信息？');
+} else if (questionText === '医疗险对比') {
+addAIMessage('目前市场上热门的百万医疗险对比：<br><br>平安e生保：0-60岁，最高600万保额，一般医疗+特需<br>众安尊享e生：0-65岁，最高700万保额，一般医疗<br>微医保·超越保：0-70岁，最高800万保额，一般医疗+特需+质子重离子<br><br>您更关注哪方面的保障？');
+} else if (questionText === '养老规划建议') {
+addAIMessage('养老规划建议需要考虑多方面因素：<br><br>1. 社保基础：确保缴纳养老保险<br>2. 商业养老险：建议配置递延型养老年金<br>3. 投资理财：稳健型基金定投<br>4. 医疗保障：配置长期医疗险<br><br>您想详细了解哪一方面？');
+} else if (questionText === '子女教育金') {
+addAIMessage('子女教育金规划方案：<br><br>1. 教育年金险：每年返还型，对应不同教育阶段<br>2. 少儿万能险：灵活存取，兼顾教育和保障<br>3. 基金定投：长期积累，可对抗通胀<br><br>根据孩子年龄和教育需求，我可以为您定制专属方案。您孩子目前多大？');
+}
+}, 1000);
+});
+});
+// 处理发送按钮点击
+const sendButton = document.querySelector('.ri-send-plane-fill').parentElement;
+const inputField = document.querySelector('input[type="text"]');
+sendButton.addEventListener('click', function() {
+const message = inputField.value.trim();
+if (message) {
+addUserMessage(message);
+inputField.value = '';
+// 模拟AI回复
+setTimeout(() => {
+addAIMessage('感谢您的提问。我正在分析相关信息，稍后为您提供专业建议。您还有其他问题吗？');
+}, 1000);
+}
+});
+// 监听输入框回车事件
+inputField.addEventListener('keypress', function(e) {
+if (e.key === 'Enter') {
+sendButton.click();
+}
+});
+// 处理产品卡片点击
+const productCards = document.querySelectorAll('.message-ai .bg-white');
+productCards.forEach(card => {
+card.addEventListener('click', function() {
+const productName = this.querySelector('h3').textContent;
+addUserMessage(`我想查看${productName}的详细信息`);
+// 模拟AI回复
+setTimeout(() => {
+if (productName === '康惠保旗舰版') {
+addAIMessage(`<div class="bg-white rounded-lg p-3 shadow-sm">
+<h3 class="font-medium">康惠保旗舰版 - 详细信息</h3>
+<div class="mt-2 space-y-1">
+<p class="text-xs text-gray-600">保险公司：平安人寿</p>
+<p class="text-xs text-gray-600">适用年龄：0-65周岁</p>
+<p class="text-xs text-gray-600">保障期限：终身</p>
+<p class="text-xs text-gray-600">等待期：90天</p>
+<p class="text-xs text-gray-600">重疾种类：120种</p>
+<p class="text-xs text-gray-600">轻症种类：50种</p>
+<p class="text-xs text-gray-600">特色：重疾多次赔付，癌症额外赔付</p>
+</div>
+<div class="mt-3 flex justify-between">
+<button class="text-xs px-3 py-1.5 bg-primary text-white rounded-button">加入规划</button>
+<button class="text-xs px-3 py-1.5 border border-primary text-primary rounded-button">查看条款</button>
+</div>
+</div>`);
+} else {
+addAIMessage(`<div class="bg-white rounded-lg p-3 shadow-sm">
+<h3 class="font-medium">${productName} - 详细信息</h3>
+<div class="mt-2 space-y-1">
+<p class="text-xs text-gray-600">保险公司：太平人寿</p>
+<p class="text-xs text-gray-600">适用年龄：0-60周岁</p>
+<p class="text-xs text-gray-600">保障期限：30年</p>
+<p class="text-xs text-gray-600">等待期：180天</p>
+<p class="text-xs text-gray-600">重疾种类：100种</p>
+<p class="text-xs text-gray-600">轻症种类：40种</p>
+<p class="text-xs text-gray-600">特色：保费豁免，身故返还保费</p>
+</div>
+<div class="mt-3 flex justify-between">
+<button class="text-xs px-3 py-1.5 bg-primary text-white rounded-button">加入规划</button>
+<button class="text-xs px-3 py-1.5 border border-primary text-primary rounded-button">查看条款</button>
+</div>
+</div>`);
+}
+}, 1000);
+});
+});
+});
+// 添加用户消息
+function addUserMessage(message) {
+const chatContainer = document.querySelector('.chat-container .space-y-4');
+const now = new Date();
+const time = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
+const messageElement = document.createElement('div');
+messageElement.className = 'flex flex-col items-start';
+messageElement.innerHTML = `
+<div class="message-user p-3">
+<p class="text-sm">${message}</p>
+</div>
+<span class="text-xs text-gray-500 mt-1 ml-2">${time}</span>
+`;
+chatContainer.appendChild(messageElement);
+scrollToBottom();
+}
+// 添加AI消息
+function addAIMessage(message) {
+const chatContainer = document.querySelector('.chat-container .space-y-4');
+const now = new Date();
+const time = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
+const messageElement = document.createElement('div');
+messageElement.className = 'flex flex-col items-end';
+messageElement.innerHTML = `
+<div class="message-ai p-3">
+<p class="text-sm">${message}</p>
+</div>
+<span class="text-xs text-gray-500 mt-1 mr-2">${time}</span>
+`;
+chatContainer.appendChild(messageElement);
+scrollToBottom();
+// 如果新添加的消息中包含产品卡片，添加点击事件
+const newProductCards = messageElement.querySelectorAll('.bg-white');
+newProductCards.forEach(card => {
+if (card.querySelector('h3')) {
+card.addEventListener('click', function() {
+const productName = this.querySelector('h3').textContent.split(' - ')[0];
+addUserMessage(`我对${productName}很感兴趣，能否安排顾问联系我？`);
+setTimeout(() => {
+addAIMessage('已记录您的需求，我们的专业顾问将在1个工作日内与您联系。您还可以在"我的-咨询记录"中查看进度。');
+}, 1000);
+});
+}
+// 为按钮添加点击事件
+const buttons = card.querySelectorAll('button');
+buttons.forEach(button => {
+button.addEventListener('click', function(e) {
+e.stopPropagation(); // 阻止事件冒泡
+const buttonText = this.textContent;
+const productName = card.querySelector('h3').textContent.split(' - ')[0];
+if (buttonText === '加入规划') {
+addUserMessage(`将${productName}加入我的保险规划`);
+setTimeout(() => {
+addAIMessage(`已将${productName}加入您的保险规划。您可以在"规划"页面查看完整的保障方案和预算分析。`);
+}, 1000);
+} else if (buttonText === '查看条款') {
+addUserMessage(`查看${productName}的保险条款`);
+setTimeout(() => {
+addAIMessage(`${productName}的核心条款摘要：<br><br>1. 重大疾病：确诊即赔付100%保额<br>2. 轻症疾病：确诊赔付30%保额，最多3次<br>3. 身故保障：身故赔付100%保额<br>4. 豁免条款：确诊轻症后豁免后续保费<br><br>您想了解哪一部分的具体细节？`);
+}, 1000);
+}
+});
+});
+});
+}
+// 滚动到底部
+function scrollToBottom() {
+window.scrollTo(0, document.body.scrollHeight);
+}
+</script>
+</body>
+</html>

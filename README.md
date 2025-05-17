@@ -19,6 +19,52 @@
         - 注册模式自动检测密码和确认密码是否一致，不一致时提示
     - 具有账号密码错误时的提示，输入框变为红色
     - 登录成功后转至首页
+- **首页**
+    - 首页可通过底部导航栏通过滑动或点击，切换聊天页面、保险页面、规划页面、个人信息页面；默认为对话页面
+
+- **对话页面**
+    - 对话页面的实现可以参考insuranceAPP/Financial-Planner项目的实现，转变为Flutter实现
+        - Financial-Planner项目是基于typescript+react实现Dify前端项目，可以作为逻辑和结构参考
+    - 对话页面由顶部栏、中间对话框、底部输入框组成
+    - 如果是新对话
+        - 此时对话框中展示该模块的基本信息，开场白、开场推荐问题列表、用户输入表单等
+        - 可以通过DifyAPI:GET/parameters获取应用参数
+    - 顶部栏包含当前对话标题（默认显示为“新对话”）、一个侧面按钮、一个新建对话按钮组成
+        - 对话标题可以由用户重命名，该功能可以由Dify API:POST/conversations/:conversation_id/name实现
+        - 需要注意的是，对话标题可以通过POST/conversations/:conversation_id/name中将auto_generate设置为true，由Dify API自动生成,也可以使用这个方法自动更新对话标题
+        - 左上角一个菜单按钮，点击可以进入菜单页面
+        - 右上角一个新建对话按钮可新建一个对话，并终止当前对话，重置聊天页面。
+    - 中间对话框由经典的头像+对话气泡的方式组成
+        - 气泡中的内容需要能够展示ai返回的markdown格式内容,并且支持流式地显示
+            - 最好能够通过Dify对话消息API返回的workflow_started、node_started、node_finished、workflow_finished等事件，显示加载进度。
+        - 需要能够展示用户上传的图片、文件信息等
+        - 气泡应该有点赞、点踩、语音播放按钮
+            - 点赞、点踩按钮可以由Dify API:POST/messages/:message_id/feedbacks实现
+            - 语音播放可以通过Dify API:POST/text-to-audio实现
+        - 需要能够通过滚动上滑加载历史消息：
+            - 可以通过Dify API:GET/messages获取会话历史消息
+    - 底部输入框包含输入框、一个语音输入按钮、一个上传文件按钮和一个发送按钮（在导航栏之上）。
+        - 发送按钮通过调用Dify API:POST/chat-messages发送消息
+        - 语音输入按钮通过调用Dify API:POST/audio-to-text实现
+            - 语音输入按钮可采取长按按钮移至中心变为圆形开始录音，通过检测声音大小变动圆形的大小实现动画效果，实时转录的显示转录后的文字的实现方式
+        - 上传文件按钮通过调用Dify API:POST/file-upload实现
+
+- **菜单页面**
+    - 菜单页面分为三个部分，纵向排列
+    - 第一个部分为AI模块选择
+        - 通过/ai_modules接口获取AI模块列表，
+        - 然后使用获得的api key通过Dify API:GET/info获取应用信息(名称和描述)
+        - 并通过横向卡片列表的方式展示ai模块的名称和描述。
+    - 第二个部分为历史聊天记录
+        - 通过纵向列表的方式展示历史聊天的名称和时间。
+        - 可以通过dify API:GET/conversations获取会话历史列表
+            - 需要注意的是，会话历史列表仅包含当前选择的AI模块的会话历史
+            - 如果切换ai模块，会话历史列表也应该相应的切换！
+        - 点击后可跳转至对应会话的对话页面继续聊天
+        - 可以通过Dify API:DELETE/conversations/:conversation_id删除会话
+    - 第三部分为右上角一个返回按钮，点击后可以返回对话页面
+
+
 ### 后端API
 - 登录API
     - 请求方式：POST
@@ -58,6 +104,22 @@
         - message: 重置密码成功或失败信息
         - token: JWT token
         - user_id: 用户ID
+
+- 获取AI模块列表API
+    - 请求方式：GET
+    - 请求路径：/ai_modules
+    - 请求参数：
+        - user_id: 用户ID
+    - 后端根据用户ID获取AI模块列表
+    - 返回体：
+        - code:状态码
+        - message: 获取AI模块列表成功或失败信息
+        - ai_modules: AI模块API key列表
+    - AI key列表可以设置在.env文件中
+
+- 对话和聊天相关的API
+    - **请注意**：本后端不需要实现对话和聊天的API，前端直接调用Dify提供的API即可。
+
 ### 后端数据库
 - 目前先采用postgresql数据库
 - 数据库表结构

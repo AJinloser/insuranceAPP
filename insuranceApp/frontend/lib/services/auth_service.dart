@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/user.dart';
 import 'api_service.dart';
+import 'chat_service.dart';
 
 enum AuthStatus {
   unknown,
@@ -63,6 +64,10 @@ class AuthService with ChangeNotifier {
       _userId = response.userId;
       _authStatus = AuthStatus.authenticated;
       notifyListeners();
+      
+      // 通知ChatService更新用户ID
+      await _updateChatServiceUserId();
+      
       return true;
     } catch (e) {
       _authStatus = AuthStatus.unauthenticated;
@@ -78,6 +83,10 @@ class AuthService with ChangeNotifier {
       _userId = response.userId;
       _authStatus = AuthStatus.authenticated;
       notifyListeners();
+      
+      // 通知ChatService更新用户ID
+      await _updateChatServiceUserId();
+      
       return true;
     } catch (e) {
       _authStatus = AuthStatus.unauthenticated;
@@ -93,6 +102,10 @@ class AuthService with ChangeNotifier {
       _userId = response.userId;
       _authStatus = AuthStatus.authenticated;
       notifyListeners();
+      
+      // 通知ChatService更新用户ID
+      await _updateChatServiceUserId();
+      
       return true;
     } catch (e) {
       rethrow;
@@ -105,5 +118,18 @@ class AuthService with ChangeNotifier {
     _userId = null;
     _authStatus = AuthStatus.unauthenticated;
     notifyListeners();
+  }
+  
+  // 通知ChatService更新用户ID
+  Future<void> _updateChatServiceUserId() async {
+    try {
+      final chatService = ChatService();
+      // 如果ChatService已经初始化，则调用其初始化用户ID的方法
+      if (chatService.isInitialized) {
+        await chatService.reloadUserId();
+      }
+    } catch (e) {
+      debugPrint('更新ChatService用户ID失败: $e');
+    }
   }
 } 
