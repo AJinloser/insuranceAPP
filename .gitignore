@@ -21,6 +21,22 @@ insuranceApp/build/
 **/flutter_*.png
 **/flutter_export_environment.sh
 
+# 来自 Flutter 创建的 .gitignore
+**/.atom/
+**/.build/
+**/.buildlog/
+**/.history
+**/.svn/
+**/.swiftpm/
+**/migrate_working_dir/
+**/ios/Flutter/.last_build_id
+
+# Symbolication 相关
+**/app.*.symbols
+
+# Obfuscation 相关
+**/app.*.map.json
+
 # Dart相关
 *.dart.js
 *.dart.js.deps
@@ -37,6 +53,11 @@ insuranceApp/build/
 **/android/keystore.properties
 **/android/local.properties
 **/android/**/GeneratedPluginRegistrant.*
+
+# Android Studio 构建产物
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
 
 # iOS/XCode相关
 **/ios/**/*.mode1v3
