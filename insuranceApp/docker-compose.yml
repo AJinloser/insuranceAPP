@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # 前端服务 - Flutter Web
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: always
+    volumes:
+      - ./nginx/conf:/etc/nginx/conf.d
+      - ./nginx/ssl:/etc/nginx/ssl
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+    networks:
+      - insurance-network
+
+  # 后端服务 - FastAPI
+  backend:
+    build: ./backend
+    restart: always
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/.env:/app/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/insurance_app
+      - PYTHONPATH=/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - insurance-network
+  
+  # 数据库服务 - PostgreSQL
+  db:
+    image: postgres:15
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=insurance_app
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - insurance-network
+
+volumes:
+  postgres_data:
+
+networks:
+  insurance-network:
+    driver: bridge 
