@@ -14,7 +14,6 @@ import '../models/dify_models.dart';
 import 'dify_service.dart';
 import 'api_service.dart';
 import 'auth_service.dart';
-import '../utils/constants.dart';
 import '../models/stream_models.dart';
 import 'stream_service.dart';
 
@@ -743,8 +742,9 @@ class ChatService with ChangeNotifier {
   // 获取AI模块的参数
   Future<AppParameters?> getAIModuleParameters(String apiKey) async {
     try {
+      final difyBaseUrl = dotenv.env['DIFY_API_BASE_URL'] ?? 'http://47.238.246.199/v1';
       final response = await http.get(
-        Uri.parse('${Constants.difyApiBaseUrl}/parameters'),
+        Uri.parse('$difyBaseUrl/parameters'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $apiKey',

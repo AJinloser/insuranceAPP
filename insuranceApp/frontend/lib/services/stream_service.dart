@@ -2,13 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import '../utils/constants.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/stream_models.dart';
 
 /// 流式服务类，用于处理Dify API的SSE（Server-Sent Events）流式响应
 class StreamService {
   // 基础URL
-  final String baseUrl = Constants.difyApiBaseUrl;
+  final String baseUrl = dotenv.env['DIFY_API_BASE_URL'] ?? 'http://47.238.246.199/v1';
 
   /// 创建一个流式HTTP请求
   /// 
