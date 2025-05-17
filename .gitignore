@@ -25,7 +25,7 @@ insuranceApp/build/
 *.dart.js
 *.dart.js.deps
 *.dart.js.map
-*.g.dart
+# *.g.dart
 *.freezed.dart
 
 # Android相关
