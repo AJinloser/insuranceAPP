@@ -41,7 +41,7 @@ class ConversationItem extends StatelessWidget {
         side: BorderSide(
           color: isSelected 
               ? primaryColor 
-              : Colors.grey.withOpacity(0.2),
+              : Colors.grey.withAlpha(51),
           width: isSelected ? 2 : 1,
         ),
       ),
@@ -57,7 +57,7 @@ class ConversationItem extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
+                  color: primaryColor.withAlpha(26),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Icon(

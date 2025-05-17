@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 
 import '../models/dify_models.dart';
 import '../services/chat_service.dart';
-import '../widgets/custom_button.dart';
 import '../widgets/ai_welcome_view.dart';
 import '../widgets/chat_message_item.dart';
 
@@ -188,7 +186,7 @@ class _ConversationPageState extends State<ConversationPage> {
         color: _primaryColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withAlpha(26),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -413,7 +411,7 @@ class _ConversationPageState extends State<ConversationPage> {
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withAlpha(13),
                 blurRadius: 5,
                 offset: const Offset(0, -1),
               ),
@@ -432,7 +430,7 @@ class _ConversationPageState extends State<ConversationPage> {
                       borderSide: BorderSide.none,
                     ),
                     filled: true,
-                    fillColor: Colors.grey.withOpacity(0.1),
+                    fillColor: Colors.grey.withAlpha(26),
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 12,

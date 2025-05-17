@@ -58,22 +58,6 @@ class _AIWelcomeViewState extends State<AIWelcomeView> {
     super.dispose();
   }
 
-  void _submitForm() {
-    final Map<String, String> formData = {};
-
-    // 收集文本输入和段落输入
-    for (var entry in _controllers.entries) {
-      formData[entry.key] = entry.value.text;
-    }
-
-    // 收集下拉选择
-    for (var entry in _selectedValues.entries) {
-      formData[entry.key] = entry.value;
-    }
-
-    widget.onSubmit(formData);
-  }
-
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(

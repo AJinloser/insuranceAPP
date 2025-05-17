@@ -35,7 +35,7 @@ class ChatMessageItem extends StatelessWidget {
               height: 40,
               margin: const EdgeInsets.only(right: 12.0),
               decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
+                color: primaryColor.withAlpha(26),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Icon(
@@ -61,7 +61,7 @@ class ChatMessageItem extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isUserMessage
                         ? primaryColor
-                        : Colors.grey.withOpacity(0.1),
+                        : Colors.grey.withAlpha(26),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: isUserMessage 
@@ -91,11 +91,11 @@ class ChatMessageItem extends StatelessWidget {
                                 ),
                                 code: TextStyle(
                                   fontSize: 14,
-                                  backgroundColor: Colors.grey.withOpacity(0.2),
+                                  backgroundColor: Colors.grey.withAlpha(51),
                                   fontFamily: 'monospace',
                                 ),
                                 codeblockDecoration: BoxDecoration(
-                                  color: Colors.grey.withOpacity(0.2),
+                                  color: Colors.grey.withAlpha(51),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
@@ -166,7 +166,7 @@ class ChatMessageItem extends StatelessWidget {
               height: 40,
               margin: const EdgeInsets.only(left: 12.0),
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.2),
+                color: Colors.grey.withAlpha(51),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Icon(
@@ -219,7 +219,7 @@ class ChatMessageItem extends StatelessWidget {
                   return Container(
                     width: 200,
                     height: 150,
-                    color: Colors.grey.withOpacity(0.2),
+                    color: Colors.grey.withAlpha(51),
                     child: const Center(
                       child: CircularProgressIndicator(),
                     ),
@@ -229,7 +229,7 @@ class ChatMessageItem extends StatelessWidget {
                   return Container(
                     width: 200,
                     height: 150,
-                    color: Colors.grey.withOpacity(0.2),
+                    color: Colors.grey.withAlpha(51),
                     child: const Center(
                       child: Icon(Icons.error, color: Colors.red),
                     ),
@@ -250,9 +250,9 @@ class ChatMessageItem extends StatelessWidget {
       margin: const EdgeInsets.only(top: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey.withOpacity(0.1),
+        color: Colors.grey.withAlpha(26),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.withOpacity(0.3)),
+        border: Border.all(color: Colors.grey.withAlpha(77)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -327,7 +327,7 @@ class _AnimatedDotsWidgetState extends State<AnimatedDotsWidget>
           width: 8,
           height: 8,
           decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.5 + (_animation.value * 0.5)),
+            color: Colors.grey.withAlpha(128 + ((_animation.value * 0.5) * 127).round()),
             shape: BoxShape.circle,
           ),
         );

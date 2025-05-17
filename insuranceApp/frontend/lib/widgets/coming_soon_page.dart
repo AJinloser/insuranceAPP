@@ -24,7 +24,7 @@ class ComingSoonPage extends StatelessWidget {
             Icon(
               Icons.construction,
               size: 80,
-              color: primaryColor.withOpacity(0.7),
+              color: primaryColor.withAlpha(179),
             ),
             const SizedBox(height: 24),
             Text(
@@ -43,7 +43,7 @@ class ComingSoonPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.2),
+                    color: Colors.grey.withAlpha(51),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),

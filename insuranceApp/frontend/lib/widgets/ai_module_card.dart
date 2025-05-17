@@ -29,7 +29,7 @@ class AIModuleCard extends StatelessWidget {
     }
     
     // 标签列表
-    final tags = module.appInfo!.tags ?? [];
+    final tags = module.appInfo!.tags;
     
     return Card(
       elevation: isSelected ? 4 : 1,
@@ -93,7 +93,7 @@ class AIModuleCard extends StatelessWidget {
               SizedBox(
                 height: 44, // 固定高度，大约2行文本
                 child: Text(
-                  module.appInfo!.description ?? '',
+                  module.appInfo!.description,
                   style: const TextStyle(
                     fontSize: 13,
                     color: Colors.black54,
@@ -127,7 +127,7 @@ class AIModuleCard extends StatelessWidget {
       margin: const EdgeInsets.only(right: 4),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: primaryColor.withOpacity(0.1),
+        color: primaryColor.withAlpha(26),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(

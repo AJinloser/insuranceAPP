@@ -60,7 +60,6 @@ class MyApp extends StatelessWidget {
           primary: const Color(0xFF6A1B9A),
           secondary: const Color(0xFF8E24AA),
           surface: Colors.white,
-          background: Colors.white,
         ),
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
@@ -109,7 +108,6 @@ class MyApp extends StatelessWidget {
               return const HomePage();
             case AuthStatus.unauthenticated:
             case AuthStatus.unknown:
-            default:
               return const LoginScreen();
           }
         },

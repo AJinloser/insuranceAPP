@@ -28,8 +28,8 @@ class _MenuPageState extends State<MenuPage> {
   // 主题色定义，与登录页面统一
   final Color _primaryColor = const Color(0xFF6A1B9A); // 紫色主题
   final Color _backgroundColor = Colors.white; // 白色背景
-  final Color _cardColor = Colors.white; // 白色卡片
-  final Color _lightPurple = const Color(0xFFEDE7F6); // 浅紫色背景
+  // final Color _cardColor = Colors.white; // 白色卡片
+  // final Color _lightPurple = const Color(0xFFEDE7F6); // 浅紫色背景
   
   @override
   void initState() {
@@ -109,7 +109,7 @@ class _MenuPageState extends State<MenuPage> {
   // 选择AI模块
   void _selectAIModule(AIModule module) async {
     final chatService = Provider.of<ChatService>(context, listen: false);
-    final bool isSameModule = _selectedModule?.apiKey == module.apiKey;
+    // final bool isSameModule = _selectedModule?.apiKey == module.apiKey;
     
     setState(() {
       _isLoading = true;
@@ -231,8 +231,8 @@ class _MenuPageState extends State<MenuPage> {
   
   // 构建AI模块选择区域
   Widget _buildAIModulesSection(ChatService chatService) {
-    final size = MediaQuery.of(context).size;
-    final cardWidth = size.width > 600 ? 200.0 : 180.0;
+    // final size = MediaQuery.of(context).size;
+    // final cardWidth = size.width > 600 ? 200.0 : 180.0;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -272,7 +272,7 @@ class _MenuPageState extends State<MenuPage> {
   
   // 构建历史会话区域
   Widget _buildConversationsSection(ChatService chatService) {
-    final size = MediaQuery.of(context).size;
+    // final size = MediaQuery.of(context).size;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,7 +342,7 @@ class _MenuPageState extends State<MenuPage> {
   Widget _buildRenameDialog(Conversation conversation) {
     final TextEditingController controller = TextEditingController(text: conversation.name);
     final primaryColor = const Color(0xFF6A1B9A); // 紫色主题
-    final lightPurple = const Color(0xFFEDE7F6); // 浅紫色
+    // final lightPurple = const Color(0xFFEDE7F6); // 浅紫色
     
     return AlertDialog(
       title: Text(
