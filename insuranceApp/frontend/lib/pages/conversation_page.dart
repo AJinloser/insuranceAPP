@@ -27,9 +27,6 @@ class _ConversationPageState extends State<ConversationPage> {
   final ScrollController _scrollController = ScrollController();
   bool _isLoading = true;
   
-  // 主题色定义，与登录页面统一
-  final Color _primaryColor = const Color(0xFF6A1B9A); // 紫色主题
-  
   @override
   void initState() {
     super.initState();
@@ -161,76 +158,37 @@ class _ConversationPageState extends State<ConversationPage> {
   
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).primaryColor;
+    
     return Scaffold(
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: _primaryColor))
-          : Column(
-              children: [
-                // 自定义工具栏
-                _buildToolbar(),
-                // 内容区域
-                Expanded(
-                  child: _buildBody(),
-                ),
-              ],
-            ),
-    );
-  }
-  
-  // 构建自定义工具栏
-  Widget _buildToolbar() {
-    return Container(
-      height: 60,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: _primaryColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(26),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed: () {
+            // 导航到菜单页面
+            Navigator.pushNamed(context, '/menu');
+          },
+        ),
+        title: Consumer<ChatService>(
+          builder: (context, chatService, child) {
+            final conversation = chatService.currentConversation;
+            return Text(
+              conversation?.name ?? '新对话',
+              style: const TextStyle(color: Colors.white),
+            );
+          },
+        ),
+        actions: [
+          // 右侧新建对话按钮
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline),
+            onPressed: _createNewConversation,
           ),
         ],
       ),
-      child: SafeArea(
-        child: Row(
-          children: [
-            // 左侧菜单按钮
-            IconButton(
-              icon: const Icon(Icons.menu, color: Colors.white),
-              onPressed: () {
-                // 导航到菜单页面
-                Navigator.pushNamed(context, '/menu');
-              },
-            ),
-            
-            // 中间标题
-            Expanded(
-              child: Center(
-                child: Consumer<ChatService>(
-                  builder: (context, chatService, child) {
-                    final conversation = chatService.currentConversation;
-                    return Text(
-                      conversation?.name ?? '新对话',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-            
-            // 右侧新建对话按钮
-            IconButton(
-              icon: const Icon(Icons.add_circle_outline, color: Colors.white),
-              onPressed: _createNewConversation,
-            ),
-          ],
-        ),
-      ),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator(color: primaryColor))
+          : _buildBody(),
     );
   }
   
@@ -379,7 +337,7 @@ class _ConversationPageState extends State<ConversationPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(color: _primaryColor),
+            CircularProgressIndicator(color: Theme.of(context).primaryColor),
             const SizedBox(height: 16),
             const Text('加载AI模块信息...'),
           ],
@@ -416,6 +374,7 @@ class _ConversationPageState extends State<ConversationPage> {
     return Consumer<ChatService>(
       builder: (context, chatService, child) {
         final isSending = chatService.isSending;
+        final primaryColor = Theme.of(context).primaryColor;
         
         return Container(
           padding: const EdgeInsets.all(16.0),
@@ -466,7 +425,7 @@ class _ConversationPageState extends State<ConversationPage> {
                   : IconButton(
                       onPressed: _sendMessage,
                       icon: const Icon(Icons.send),
-                      color: Theme.of(context).primaryColor,
+                      color: primaryColor,
                     ),
             ],
           ),
@@ -477,6 +436,9 @@ class _ConversationPageState extends State<ConversationPage> {
   
   // 构建建议问题UI
   Widget _buildSuggestedQuestions(List<String> questions) {
+    final primaryColor = Theme.of(context).primaryColor;
+    final lightPurple = const Color(0xFFF8F5FF);
+    
     return Container(
       padding: const EdgeInsets.only(left: 60, top: 8, bottom: 8),
       child: Column(
@@ -506,15 +468,15 @@ class _ConversationPageState extends State<ConversationPage> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEDE7F6), // 浅紫色背景
+                    color: lightPurple,
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFF6A1B9A).withOpacity(0.2)),
+                    border: Border.all(color: primaryColor.withOpacity(0.2)),
                   ),
                   child: Text(
                     question,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: Color(0xFF6A1B9A), // 紫色文字
+                      color: primaryColor,
                     ),
                   ),
                 ),

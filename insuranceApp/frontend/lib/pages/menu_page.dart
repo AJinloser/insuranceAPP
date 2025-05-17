@@ -123,21 +123,15 @@ class _MenuPageState extends State<MenuPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           '菜单',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.white),
         ),
-        centerTitle: true,
-        backgroundColor: _primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
         automaticallyImplyLeading: false,
         actions: [
           // 添加返回按钮
           IconButton(
-            icon: const Icon(Icons.arrow_forward),
+            icon: const Icon(Icons.arrow_forward, size: 22),
             onPressed: () {
               // 返回首页
               Navigator.pushReplacementNamed(context, '/home');
@@ -146,7 +140,7 @@ class _MenuPageState extends State<MenuPage> {
         ],
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator(color: _primaryColor))
+          ? Center(child: CircularProgressIndicator(color: Theme.of(context).primaryColor))
           : _buildBody(),
     );
   }
@@ -157,7 +151,7 @@ class _MenuPageState extends State<MenuPage> {
     final double verticalPadding = size.height * 0.02; // 根据屏幕高度调整垂直间距
     
     return Container(
-      color: _backgroundColor,
+      color: Colors.white,
       child: SingleChildScrollView(
         child: Padding(
           padding: EdgeInsets.fromLTRB(16, verticalPadding * 0.5, 16, 16),
@@ -166,15 +160,15 @@ class _MenuPageState extends State<MenuPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // AI模块选择区域
-              _buildSectionTitle('AI 助手', Icons.smart_toy),
-              SizedBox(height: verticalPadding * 0.6),
+              _buildSectionTitle('AI 助手', Icons.smart_toy_outlined),
+              SizedBox(height: verticalPadding * 0.4),
               _buildAIModulesSection(chatService),
               
-              SizedBox(height: verticalPadding * 1.2),
+              SizedBox(height: verticalPadding * 1.0),
               
               // 历史会话区域
-              _buildSectionTitle('历史对话', Icons.history),
-              SizedBox(height: verticalPadding * 0.6),
+              _buildSectionTitle('历史对话', Icons.history_outlined),
+              SizedBox(height: verticalPadding * 0.4),
               SizedBox(
                 height: size.height * 0.5, // 增加高度，因为没有常见问题部分
                 child: _buildConversationsSection(chatService),
@@ -191,16 +185,16 @@ class _MenuPageState extends State<MenuPage> {
   // 构建区域标题
   Widget _buildSectionTitle(String title, IconData icon) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Row(
         children: [
-          Icon(icon, color: _primaryColor, size: 24),
+          Icon(icon, color: _primaryColor, size: 22),
           const SizedBox(width: 8),
           Text(
             title,
             style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              fontWeight: FontWeight.w500, // 中等粗细
               color: _primaryColor,
             ),
           ),
@@ -211,20 +205,17 @@ class _MenuPageState extends State<MenuPage> {
   
   // 构建AI模块选择区域
   Widget _buildAIModulesSection(ChatService chatService) {
-    // final size = MediaQuery.of(context).size;
-    // final cardWidth = size.width > 600 ? 200.0 : 180.0;
-    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          padding: const EdgeInsets.only(left: 4, bottom: 10),
           child: Text(
             '选择你需要的AI助手类型',
             style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey[800],
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              color: Colors.grey[700],
             ),
           ),
         ),
@@ -235,13 +226,10 @@ class _MenuPageState extends State<MenuPage> {
             itemCount: chatService.aiModules.length,
             itemBuilder: (context, index) {
               final module = chatService.aiModules[index];
-              return Padding(
-                padding: const EdgeInsets.only(right: 12.0),
-                child: AIModuleCard(
-                  module: module,
-                  isSelected: _selectedModule?.apiKey == module.apiKey,
-                  onTap: () => _selectAIModule(module),
-                ),
+              return AIModuleCard(
+                module: module,
+                isSelected: _selectedModule?.apiKey == module.apiKey,
+                onTap: () => _selectAIModule(module),
               );
             },
           ),
@@ -252,20 +240,18 @@ class _MenuPageState extends State<MenuPage> {
   
   // 构建历史会话区域
   Widget _buildConversationsSection(ChatService chatService) {
-    // final size = MediaQuery.of(context).size;
-    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          padding: const EdgeInsets.only(left: 4, bottom: 10),
           child: Text(
             '继续之前的对话',
             style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey[800],
+              fontSize: 14,
+              fontWeight: FontWeight.w400,
+              color: Colors.grey[700],
             ),
           ),
         ),
@@ -278,15 +264,15 @@ class _MenuPageState extends State<MenuPage> {
                     children: [
                       Icon(
                         Icons.chat_bubble_outline,
-                        size: 48,
-                        color: Colors.grey[400],
+                        size: 42,
+                        color: Colors.grey[300],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       Text(
                         '暂无会话，返回对话页面新建对话',
                         style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
+                          fontSize: 13,
+                          color: Colors.grey[500],
                         ),
                       ),
                     ],
@@ -297,7 +283,7 @@ class _MenuPageState extends State<MenuPage> {
                   itemCount: chatService.conversations.length,
                   separatorBuilder: (context, index) => Divider(
                     height: 1,
-                    color: Colors.grey[200],
+                    color: Colors.grey[100],
                   ),
                   itemBuilder: (context, index) {
                     final conversation = chatService.conversations[index];
@@ -320,15 +306,19 @@ class _MenuPageState extends State<MenuPage> {
   // 构建重命名对话框
   Widget _buildRenameDialog(Conversation conversation) {
     final TextEditingController controller = TextEditingController(text: conversation.name);
-    final primaryColor = const Color(0xFF6A1B9A); // 紫色主题
-    // final lightPurple = const Color(0xFFEDE7F6); // 浅紫色
+    final primaryColor = const Color(0xFF8E6FF7); // 更新为设计稿中的紫色
+    final lightPurple = const Color(0xFFF8F5FF); // 更新为设计稿中的浅紫色
     
     return AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12), // 更圆的对话框
+      ),
       title: Text(
         '重命名会话',
         style: TextStyle(
           color: primaryColor,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w500,
+          fontSize: 17,
         ),
       ),
       content: Column(
@@ -338,17 +328,24 @@ class _MenuPageState extends State<MenuPage> {
             controller: controller,
             decoration: InputDecoration(
               hintText: '输入新的会话名称',
+              hintStyle: TextStyle(
+                color: Colors.grey[400],
+                fontSize: 14,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey[200]!),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide(
                   color: primaryColor,
-                  width: 2,
+                  width: 1.5,
                 ),
               ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             ),
+            style: const TextStyle(fontSize: 14),
             autofocus: true,
           ),
           const SizedBox(height: 16),
@@ -356,28 +353,32 @@ class _MenuPageState extends State<MenuPage> {
             children: [
               Icon(
                 Icons.auto_awesome,
-                size: 16,
+                size: 15,
                 color: primaryColor,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Text(
                 '或自动生成名称',
                 style: TextStyle(
-                  color: Colors.grey[700],
-                  fontSize: 14,
+                  color: Colors.grey[600],
+                  fontSize: 13,
                 ),
               ),
             ],
           ),
         ],
       ),
+      backgroundColor: Colors.white,
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.grey[600],
+          ),
           child: Text(
             '取消',
             style: TextStyle(
-              color: Colors.grey[700],
+              fontSize: 14,
             ),
           ),
         ),
@@ -390,11 +391,14 @@ class _MenuPageState extends State<MenuPage> {
             );
             Navigator.of(context).pop();
           },
+          style: TextButton.styleFrom(
+            foregroundColor: primaryColor,
+          ),
           child: Text(
             '确认',
             style: TextStyle(
-              color: primaryColor,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
             ),
           ),
         ),
@@ -408,10 +412,13 @@ class _MenuPageState extends State<MenuPage> {
             );
             Navigator.of(context).pop();
           },
+          style: TextButton.styleFrom(
+            foregroundColor: primaryColor,
+          ),
           child: Text(
             '自动生成',
             style: TextStyle(
-              color: primaryColor,
+              fontSize: 14,
             ),
           ),
         ),

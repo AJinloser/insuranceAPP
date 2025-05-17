@@ -16,10 +16,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   
-  // 统一颜色方案
-  final Color _primaryColor = const Color(0xFF6A1B9A); // 紫色主题
-  final Color _backgroundColor = Colors.white; // 白色背景
-  
   // 页面列表
   late final List<Widget> _pages;
   
@@ -61,15 +57,17 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).primaryColor;
+    
     // 所有平台统一使用底部导航栏
     return Scaffold(
-      backgroundColor: _backgroundColor,
+      backgroundColor: Colors.white,
       body: _pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        selectedItemColor: _primaryColor,
+        selectedItemColor: primaryColor,
         unselectedItemColor: Colors.grey,
         backgroundColor: Colors.white,
         elevation: 8,

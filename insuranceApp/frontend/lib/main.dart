@@ -55,11 +55,33 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.purple,
-        primaryColor: const Color(0xFF6A1B9A),
+        primaryColor: const Color(0xFF8E6FF7),
         colorScheme: ColorScheme.light(
-          primary: const Color(0xFF6A1B9A),
-          secondary: const Color(0xFF8E24AA),
+          primary: const Color(0xFF8E6FF7),
+          secondary: const Color(0xFF8E6FF7),
           surface: Colors.white,
+          background: const Color(0xFFF8F5FF),
+        ),
+        scaffoldBackgroundColor: Colors.white,
+        cardColor: Colors.white,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF8E6FF7),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(
+              bottom: Radius.circular(16),
+            ),
+          ),
+          titleTextStyle: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
+          ),
+          iconTheme: IconThemeData(
+            color: Colors.white,
+          ),
         ),
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),

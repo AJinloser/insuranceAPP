@@ -20,8 +20,8 @@ class AIModuleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).primaryColor;
-    final lightPurple = const Color(0xFFEDE7F6); // 浅紫色背景
+    final primaryColor = Theme.of(context).primaryColor; // #8E6FF7 紫色
+    final lightPurple = const Color(0xFFF8F5FF); // 更新为设计稿中的浅紫色背景
     
     // 如果应用信息不可用，显示加载中
     if (module.appInfo == null) {
@@ -32,17 +32,19 @@ class AIModuleCard extends StatelessWidget {
     final tags = module.appInfo!.tags;
     
     return Card(
-      elevation: isSelected ? 4 : 1,
+      elevation: isSelected ? 2 : 0, // 减小阴影
+      margin: const EdgeInsets.only(right: 12),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12), // 更小的圆角
         side: BorderSide(
-          color: isSelected ? primaryColor : Colors.transparent,
-          width: isSelected ? 2 : 0,
+          color: isSelected ? primaryColor : Colors.grey.withAlpha(30),
+          width: 1, // 统一边框宽度
         ),
       ),
+      color: isSelected ? lightPurple : Colors.white, // 选中时使用浅紫色背景
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12), // 和外部边框一致
         child: Container(
           width: width,
           height: 140, // 固定高度防止溢出
@@ -54,18 +56,18 @@ class AIModuleCard extends StatelessWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 图标
+                  // 图标 - 采用设计稿的样式
                   Container(
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: isSelected ? primaryColor : lightPurple,
+                      color: isSelected ? primaryColor.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
-                      Icons.psychology_outlined,
+                      Icons.smart_toy_outlined, // 更新为机器人图标
                       size: 18,
-                      color: isSelected ? Colors.white : primaryColor,
+                      color: isSelected ? primaryColor : Colors.grey[600],
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -76,8 +78,8 @@ class AIModuleCard extends StatelessWidget {
                     child: Text(
                       module.appInfo!.name,
                       style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500, // 中等粗细
                         color: isSelected ? primaryColor : Colors.black87,
                       ),
                       maxLines: 1,
@@ -94,16 +96,17 @@ class AIModuleCard extends StatelessWidget {
                 height: 44, // 固定高度，大约2行文本
                 child: Text(
                   module.appInfo!.description,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Colors.black54,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    height: 1.4, // 行高稍微紧凑一点
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               
               // 标签列表
               if (tags.isNotEmpty)
@@ -124,16 +127,17 @@ class AIModuleCard extends StatelessWidget {
   // 构建标签小组件
   Widget _buildTag(String tag, Color primaryColor) {
     return Container(
-      margin: const EdgeInsets.only(right: 4),
+      margin: const EdgeInsets.only(right: 6),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: primaryColor.withAlpha(26),
-        borderRadius: BorderRadius.circular(4),
+        color: primaryColor.withOpacity(0.08), // 更淡的背景色
+        borderRadius: BorderRadius.circular(10), // 圆角更大，接近胶囊形状
       ),
       child: Text(
         tag,
         style: TextStyle(
-          fontSize: 9,
+          fontSize: 10,
+          fontWeight: FontWeight.w400, // 正常粗细
           color: primaryColor,
         ),
       ),
@@ -142,10 +146,16 @@ class AIModuleCard extends StatelessWidget {
   
   // 构建加载中的卡片
   Widget _buildLoadingCard(BuildContext context) {
+    final primaryColor = Theme.of(context).primaryColor;
+    
     return Card(
-      elevation: 1,
+      elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Colors.grey.withAlpha(30),
+          width: 1,
+        ),
       ),
       child: Container(
         width: width,
@@ -154,13 +164,16 @@ class AIModuleCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 8),
+            CircularProgressIndicator(
+              strokeWidth: 3, // 更细的加载指示器
+              valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
+            ),
+            const SizedBox(height: 12),
             Text(
               '加载中...',
               style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
+                fontSize: 13,
+                color: Colors.grey[500],
               ),
             ),
           ],

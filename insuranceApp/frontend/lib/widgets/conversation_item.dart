@@ -33,12 +33,12 @@ class ConversationItem extends StatelessWidget {
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 8),
-      color: Colors.white, // 始终使用白色背景，不再根据isSelected改变
+      color: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: Colors.grey.withAlpha(51), // 始终使用灰色边框，不再根据isSelected改变
-          width: 1, // 统一边框宽度为1
+          color: Colors.grey.withAlpha(30), // 更淡的边框
+          width: 1,
         ),
       ),
       child: InkWell(
@@ -48,16 +48,16 @@ class ConversationItem extends StatelessWidget {
           padding: const EdgeInsets.all(12.0),
           child: Row(
             children: [
-              // 图标
+              // 图标 - 使用设计稿中的样式
               Container(
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: primaryColor.withAlpha(26),
-                  borderRadius: BorderRadius.circular(20),
+                  color: primaryColor.withAlpha(15), // 更淡的背景色
+                  borderRadius: BorderRadius.circular(12), // 方形圆角而非圆形
                 ),
                 child: Icon(
-                  Icons.chat_outlined,
+                  Icons.chat_bubble_outline, // 更新图标样式
                   color: primaryColor,
                   size: 20,
                 ),
@@ -74,8 +74,8 @@ class ConversationItem extends StatelessWidget {
                     Text(
                       conversation.name,
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        fontWeight: FontWeight.w500, // 中等粗细
+                        fontSize: 15, // 略小的字体大小
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -87,7 +87,7 @@ class ConversationItem extends StatelessWidget {
                     Text(
                       timeAgo,
                       style: TextStyle(
-                        color: Colors.grey[600],
+                        color: Colors.grey[400], // 更淡的灰色
                         fontSize: 12,
                       ),
                     ),
@@ -99,9 +99,9 @@ class ConversationItem extends StatelessWidget {
               if (onRename != null)
                 IconButton(
                   icon: Icon(
-                    Icons.edit,
+                    Icons.edit_outlined, // 轮廓版图标
                     size: 18,
-                    color: Colors.grey[600],
+                    color: Colors.grey[400],
                   ),
                   onPressed: onRename,
                   tooltip: '重命名',
@@ -113,7 +113,7 @@ class ConversationItem extends StatelessWidget {
                   icon: Icon(
                     Icons.delete_outline,
                     size: 18,
-                    color: Colors.grey[600],
+                    color: Colors.grey[400], // 更淡的灰色
                   ),
                   onPressed: onDelete,
                   tooltip: '删除',
