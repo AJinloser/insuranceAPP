@@ -5,6 +5,34 @@
 - 数据库：PostgreSQL
 - 部署：Docker
 - 包管理工具：uv
+
+### 项目结构
+```
+insuranceApp/
+├── backend/         # FastAPI后端服务
+│   ├── app/         # 应用代码
+│   │   ├── api/     # API路由
+│   │   ├── core/    # 核心配置
+│   │   ├── db/      # 数据库
+│   │   ├── models/  # 数据模型
+│   │   └── schemas/ # 数据架构
+│   ├── sql/         # 保险产品sql文件
+│   │   ├── 表说明.md # 表说明，说明各个sql文件的内容和表格式
+│   ├── tests/       # 测试
+│   ├── Dockerfile   # Docker配置
+│   ├── pyproject.toml # Python项目配置
+│   └── requirements.txt # 依赖
+└── frontend/        # Flutter前端
+    ├── lib/         # 应用代码
+    │   ├── models/  # 数据模型
+    │   ├── screens/ # 屏幕页面
+    │   ├── services/# 服务
+    │   ├── utils/   # 工具类
+    │   └── widgets/ # UI组件
+    ├── assets/      # 资源文件
+    └── pubspec.yaml # Flutter项目配置
+```
+
 ### 前端页面设计
 - **登录页**
     - 具体参考![登录页设计](./Design/login_page.png)
@@ -64,7 +92,38 @@
         - 可以通过Dify API:DELETE/conversations/:conversation_id删除会话
     - 第三部分为右上角一个返回按钮，点击后可以返回对话页面
 
+- **保险产品页面**
+    - 保险产品页面分为三个部分，纵向排列
+    - 第一部分为顶部导航栏
+        - 通过GET /insurance_products/product_types获取保险产品类型列表
+        - 顶部导航栏用于切换保险产品种类（可以通过点击、滑动等方式切换），目前包含：
+            - 定期寿险
+            - 定额终身寿险
+            - 意外险
+            - 年金险
+            - 重疾险
+            - 高端医疗险
+            - 百万医疗险及中端医疗险产品表
+        - 保险产品种类影响搜索时发送的product_type字段,进而影响后端搜索那个表
+    - 第二部分为搜索栏
+        - 搜索栏包含一个搜索框、一个搜索按钮、一个重置按钮以及一个下拉表单
+        - 搜索框对应搜索的product_name字段
+        - 下拉表单点击后显示一个大的表格，包含许多表项，每个表项对应每个保险产品种类的可选字段，可以进行筛选，也可以为空（每个保险产品不同）
+            - 可以通过GET /insurance_products/product_fields获取保险产品类型对应字段列表
+        - 搜索按钮和重置按钮分别对应搜索和重置，重置按钮清空搜索框和下拉表单
+    - 第三部分为保险产品列表
+        - 保险产品以卡片的形式展示，卡片包含产品名称、公司名称、保险类型、保费、总评分这些基本信息
+        - 卡片右端有查看详情按钮，点击后转至具体保险产品信息页面
+        - 卡片列表末尾有页码，可以通过点击页码切换页，然后向后端请求对应页的保险产品列表
+        - 卡片列表的右上角有排序按钮，用类似下拉表单的方式，点击后可以选择按照什么字段排序（会重新向后端请求数据）
 
+- **具体保险产品信息页面**
+    - 点击查看详情后进入，使用对应保险产品id通过GET /insurance_products/product_info获取具体保险产品信息
+    - 根据不同的保险产品类型展示不同的信息，具体由~/insuranceApp/backend/sql/表说明.md中的表结构决定
+    - 页面左上角需要包含一个返回按钮，点击后返回保险产品列表页面
+
+
+    
 ### 后端API
 - 登录API
     - 请求方式：POST
@@ -120,6 +179,66 @@
 - 对话和聊天相关的API
     - **请注意**：本后端不需要实现对话和聊天的API，前端直接调用Dify提供的API即可。
 
+
+
+- 获取保险产品类型API
+    - 请求方式：GET
+    - 请求路径：/insurance_products/product_types
+    - 请求参数：
+        - user_id: 用户ID
+    - 返回体：
+        - code:状态码
+        - message: 获取保险产品类型成功或失败信息
+        - product_types: 保险产品类型列表（现在包含定期寿险、定额终身寿险、意外险、年金险、重疾险、高端医疗险、百万医疗险及中端医疗险）
+
+- 获取保险产品类型对应字段API
+    - 请求方式：GET
+    - 请求路径：/insurance_products/product_fields
+    - 请求参数：
+        - user_id: 用户ID
+        - product_type: 产品类型
+    - 返回体：
+        - code:状态码
+        - message: 获取保险产品类型对应字段成功或失败信息
+        - fields: 保险产品类型对应字段列表
+
+
+- 保险产品搜索API
+    - 请求方式：GET
+    - 请求路径：/insurance_products/search
+    - 请求参数：
+        - user_id: 用户ID
+        - product_type: 产品类型
+        - page:页码
+        - limit:每页条数
+        - sort_by: 排序字段,默认按照total_score排序
+        - 上面的字段为必填字段，下面的字段为可选字段（用于搜索和筛选），按照不同的产品类型会有不用的字段类型，可选字段可以为空，为空时表示不针对这一字段进行筛选；可以为范围类型，由后端筛选范围内的产品；可以不完全匹配，由后端根据模糊匹配进行筛选
+        - 可选字段具体参照~/insuranceApp/backend/sql/表说明.md,其中详细写了各个字段的类型和含义
+    - 返回体：
+        - code:状态码
+        - message: 搜索成功或失败信息
+        - pages: 总页数
+        - products: 保险产品列表
+            - product_id: 产品ID
+            - product_name: 产品名称
+            - company_name: 保险公司名称
+            - insurance_type: 保险类型
+            - premium: 保费
+            - total_score: 总评分
+        (不需要返回每个表的全部字段，只需要返回需要展示的字段即可)
+    
+- 具体保险产品信息查询API
+    - 请求方式：GET
+    - 请求路径：/insurance_products/product_info
+    - 请求参数：
+        - user_id: 用户ID
+        - product_id: 产品ID
+        - product_type: 产品类型
+    - 返回体：
+        - code:状态码
+        - message: 查询成功或失败信息
+        - 其余字段根据~/insuranceApp/backend/sql/表说明.md中的表结构返回
+
 ### 后端数据库
 - 目前先采用postgresql数据库
 - 数据库表结构
@@ -127,3 +246,8 @@
         - user_id: 用户ID
         - account: 账号
         - password: 密码
+
+    - 保险产品表
+        - 从~/insuranceApp/backend/sql/表说明.md中获取表结构
+        - 从~/insuranceApp/backend/sql/*中获取sql文件
+        - 由于有7种保险产品，所以有7个表，每个表的表名和表结构在~/insuranceApp/backend/sql/表说明.md中都有说明

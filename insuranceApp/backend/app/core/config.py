@@ -34,9 +34,16 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     # AI模块API密钥
-    AI_MODULE_KEYS: List[str] = os.getenv("AI_MODULE_KEYS", "[]")
-
-    # 数据库配置
+    AI_MODULE_KEYS: List[str] = []
+    
+    # 数据库连接参数
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_HOST: str = "localhost"
+    POSTGRES_PORT: str = "5432"
+    POSTGRES_DB: str = "insurance_app"
+    
+    # 数据库URL
     DATABASE_URL: Optional[PostgresDsn] = None
 
     @field_validator("DATABASE_URL", mode="before")
@@ -51,11 +58,22 @@ class Settings(BaseSettings):
             port=os.getenv("POSTGRES_PORT", "5432"),
             path=f"/{os.getenv('POSTGRES_DB', 'insurance_app')}",
         )
+    
+    @field_validator("AI_MODULE_KEYS", mode="before")
+    def parse_ai_module_keys(cls, v: Any) -> List[str]:
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                return []
+        return v or []
 
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"  # 允许额外的字段
 
 
 settings = Settings()
-print(f"====> 配置加载完成，AI_MODULE_KEYS: {settings.AI_MODULE_KEYS}") 
+print(f"====> 配置加载完成，AI_MODULE_KEYS: {settings.AI_MODULE_KEYS}")
+print(f"====> 数据库连接: {settings.DATABASE_URL}") 

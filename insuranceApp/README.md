@@ -13,6 +13,8 @@ insuranceApp/
 │   │   ├── db/      # 数据库
 │   │   ├── models/  # 数据模型
 │   │   └── schemas/ # 数据架构
+│   ├── sql/         # 保险产品sql文件
+│   │   ├── 表说明.md # 表说明，说明各个sql文件的内容和表格式
 │   ├── tests/       # 测试
 │   ├── Dockerfile   # Docker配置
 │   ├── pyproject.toml # Python项目配置

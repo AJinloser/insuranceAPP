@@ -24,6 +24,7 @@ services:
     restart: always
     volumes:
       - ./backend/app:/app/app
+      - ./backend/sql:/app/sql
       - ./backend/.env:/app/.env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/insurance_app
@@ -41,6 +42,7 @@ services:
     restart: always
     volumes:
       - postgres_data:/var/lib/postgresql/data/
+      - ./backend/sql:/docker-entrypoint-initdb.d/sql/
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres

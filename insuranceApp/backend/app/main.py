@@ -1,13 +1,23 @@
-from fastapi import FastAPI
+import logging
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 
 from app.api.auth import router as auth_router
 from app.api.ai_modules import router as ai_modules_router
+from app.api.insurance_products import router as insurance_products_router
 from app.core.config import settings
-from app.db.base import Base, engine
+from app.db.base import Base, engine, get_db
+from app.db.init_db import init_db
 
-# 创建数据库表
-Base.metadata.create_all(bind=engine)
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler()]
+)
+
+logger = logging.getLogger(__name__)
 
 # 创建FastAPI应用
 app = FastAPI(
@@ -39,9 +49,32 @@ app.add_middleware(
 # 注册路由
 app.include_router(auth_router, prefix="/api/v1", tags=["认证"])
 app.include_router(ai_modules_router, prefix="/api/v1", tags=["AI模块"])
+app.include_router(
+    insurance_products_router, 
+    prefix="/api/v1/insurance_products", 
+    tags=["保险产品"]
+)
 
 
 @app.get("/api/health")
 def health_check():
     """健康检查接口"""
-    return {"status": "ok"} 
+    return {"status": "ok"}
+
+
+@app.on_event("startup")
+def startup_event():
+    """应用启动时执行的事件"""
+    logger.info("应用启动中...")
+    
+    # 创建数据库表并初始化
+    db = next(get_db())
+    try:
+        logger.info("初始化数据库...")
+        init_db(db)
+    except Exception as e:
+        logger.error(f"数据库初始化失败: {e}")
+    finally:
+        db.close()
+    
+    logger.info("应用启动完成") 
