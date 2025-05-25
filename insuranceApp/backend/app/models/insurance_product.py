@@ -3,6 +3,8 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy import inspect, MetaData, Table
+import os
+from pathlib import Path
 
 from app.db.base import Base, engine
 
@@ -28,6 +30,28 @@ class InsuranceProductBase:
     coverage_period = Column(String(50))
     total_score = Column(Numeric(6, 2))
 
+# 获取导入的保险产品类型
+def get_product_tables() -> dict:
+    """
+    获取已导入的保险产品表
+    
+    Returns:
+        表名与文件名的映射 {表名: 文件名}
+    """
+    inspector = inspect(engine)
+    tables = inspector.get_table_names()
+    
+    # 筛选保险产品表
+    product_tables = {}
+    for table in tables:
+        if table.startswith("insurance_products_"):
+            # 从表名提取产品类型
+            product_type = table.replace("insurance_products_", "")
+            # 保存表名到文件名的映射
+            product_tables[product_type] = f"{product_type}.sql"
+            
+    return product_tables
+
 # 动态映射函数
 def get_dynamic_model_class(product_type: str):
     """
@@ -40,13 +64,7 @@ def get_dynamic_model_class(product_type: str):
         对应的SQLAlchemy模型类
     """
     # 获取表名
-    if product_type not in PRODUCT_TYPE_MAPPING:
-        # 如果产品类型无效，返回基本类
-        return type(f"{product_type}Product", (Base, InsuranceProductBase), {})
-    
-    # 使用SQL文件名作为表名，格式：insurance_products_{文件名去掉.sql}
-    file_name = PRODUCT_TYPE_MAPPING[product_type]
-    table_name = f"insurance_products_{file_name.replace('.sql', '')}"
+    table_name = f"insurance_products_{product_type}"
     
     # 检查表是否存在
     inspector = inspect(engine)
@@ -71,17 +89,6 @@ def get_dynamic_model_class(product_type: str):
         class_dict = {"__table__": table}
         return type(f"{product_type}Product", (Base,), class_dict)
 
-# 产品类型到表名的映射
-PRODUCT_TYPE_MAPPING = {
-    "定期寿险": "termlife.sql",
-    "定额终身寿险": "wholelife.sql",
-    "意外险": "accident.sql",
-    "年金险": "annuity.sql",
-    "重疾险": "critical_illness.sql",
-    "高端医疗险": "high_medical_level.sql",
-    "百万医疗险及中端医疗险": "medical.sql"
-}
-
 # 根据产品类型获取字段列表
 def get_product_fields(product_type: str) -> list:
     """
@@ -93,12 +100,8 @@ def get_product_fields(product_type: str) -> list:
     Returns:
         字段列表
     """
-    if product_type not in PRODUCT_TYPE_MAPPING:
-        return []
-        
-    # 使用SQL文件名作为表名，格式：insurance_products_{文件名去掉.sql}
-    file_name = PRODUCT_TYPE_MAPPING[product_type]
-    table_name = f"insurance_products_{file_name.replace('.sql', '')}"
+    # 使用产品类型作为表名的一部分
+    table_name = f"insurance_products_{product_type}"
     
     # 反射表结构
     metadata = MetaData()

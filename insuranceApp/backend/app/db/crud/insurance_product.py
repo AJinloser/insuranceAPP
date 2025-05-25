@@ -5,7 +5,7 @@ from sqlalchemy import text, desc, asc, func, and_, or_
 from sqlalchemy.sql.expression import cast
 from sqlalchemy.dialects.postgresql import JSONB
 
-from app.models.insurance_product import get_dynamic_model_class, PRODUCT_TYPE_MAPPING
+from app.models.insurance_product import get_dynamic_model_class, get_product_tables
 from app.db.sql_importer import SQLImporter
 from app.db.base import engine
 
@@ -17,7 +17,9 @@ class InsuranceProductCRUD:
     @staticmethod
     def get_product_types() -> List[str]:
         """获取所有保险产品类型"""
-        return list(PRODUCT_TYPE_MAPPING.keys())
+        # 通过已导入的表来获取产品类型
+        product_tables = get_product_tables()
+        return list(product_tables.keys())
     
     @staticmethod
     def get_product_fields(product_type: str) -> List[str]:
@@ -30,13 +32,8 @@ class InsuranceProductCRUD:
         Returns:
             字段列表
         """
-        # 根据产品类型获取表名
-        if product_type not in PRODUCT_TYPE_MAPPING:
-            return []
-        
-        # 使用SQL文件名作为表名，格式：insurance_products_{文件名去掉.sql}
-        file_name = PRODUCT_TYPE_MAPPING[product_type]
-        table_name = f"insurance_products_{file_name.replace('.sql', '')}"
+        # 构造表名
+        table_name = f"insurance_products_{product_type}"
         
         # 反射表结构
         metadata = text(f"""
@@ -95,30 +92,48 @@ class InsuranceProductCRUD:
             if value is None:
                 continue
                 
+            # 处理常规字段
             if field == "product_name" and value:
                 query = query.filter(product_model.product_name.ilike(f"%{value}%"))
             elif field == "company_name" and value:
                 query = query.filter(product_model.company_name.ilike(f"%{value}%"))
             elif hasattr(product_model, field):
-                if isinstance(value, dict) and "min" in value and "max" in value:
-                    # 范围查询
-                    if value["min"] is not None:
-                        query = query.filter(getattr(product_model, field) >= value["min"])
-                    if value["max"] is not None:
-                        query = query.filter(getattr(product_model, field) <= value["max"])
+                # 处理不同类型的筛选
+                attr = getattr(product_model, field)
+                
+                # 范围筛选 (字典形式 {"min": 值, "max": 值})
+                if isinstance(value, dict) and ("min" in value or "max" in value):
+                    if "min" in value and value["min"] is not None:
+                        query = query.filter(attr >= value["min"])
+                    if "max" in value and value["max"] is not None:
+                        query = query.filter(attr <= value["max"])
+                
+                # JSONB字段筛选
+                elif str(attr.type) == "JSONB" and isinstance(value, dict):
+                    # 逐个筛选JSONB字段中的键值对
+                    for json_key, json_value in value.items():
+                        if json_value is not None:
+                            # 使用PostgreSQL的JSONB操作符筛选
+                            query = query.filter(attr.contains({json_key: json_value}))
+                
+                # 文本字段模糊搜索
+                elif str(attr.type) in ('VARCHAR', 'TEXT', 'String') and isinstance(value, str):
+                    query = query.filter(attr.ilike(f"%{value}%"))
+                
+                # 其他情况使用精确匹配
                 else:
-                    # 精确匹配
-                    query = query.filter(getattr(product_model, field) == value)
+                    query = query.filter(attr == value)
         
         # 计算总记录数和总页数
         total_count = query.count()
         total_pages = (total_count + limit - 1) // limit if total_count > 0 else 1
         
         # 应用排序
-        if sort_order.lower() == "asc":
-            query = query.order_by(asc(getattr(product_model, sort_by)))
-        else:
-            query = query.order_by(desc(getattr(product_model, sort_by)))
+        if sort_by and hasattr(product_model, sort_by):
+            if sort_order.lower() == "asc":
+                query = query.order_by(asc(getattr(product_model, sort_by)))
+            else:
+                query = query.order_by(desc(getattr(product_model, sort_by)))
         
         # 应用分页
         offset = (page - 1) * limit
@@ -156,13 +171,8 @@ class InsuranceProductCRUD:
         Returns:
             产品详细信息字典，未找到则返回None
         """
-        # 检查产品类型是否有效
-        if product_type not in PRODUCT_TYPE_MAPPING:
-            return None
-        
-        # 使用SQL文件名作为表名，格式：insurance_products_{文件名去掉.sql}
-        file_name = PRODUCT_TYPE_MAPPING[product_type]
-        table_name = f"insurance_products_{file_name.replace('.sql', '')}"
+        # 构造表名
+        table_name = f"insurance_products_{product_type}"
         
         try:
             # 检查表是否存在

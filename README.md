@@ -185,7 +185,6 @@ insuranceApp/
     - 请求方式：GET
     - 请求路径：/insurance_products/product_types
     - 请求参数：
-        - user_id: 用户ID
     - 返回体：
         - code:状态码
         - message: 获取保险产品类型成功或失败信息
@@ -195,7 +194,6 @@ insuranceApp/
     - 请求方式：GET
     - 请求路径：/insurance_products/product_fields
     - 请求参数：
-        - user_id: 用户ID
         - product_type: 产品类型
     - 返回体：
         - code:状态码
@@ -207,7 +205,6 @@ insuranceApp/
     - 请求方式：GET
     - 请求路径：/insurance_products/search
     - 请求参数：
-        - user_id: 用户ID
         - product_type: 产品类型
         - page:页码
         - limit:每页条数
@@ -231,7 +228,6 @@ insuranceApp/
     - 请求方式：GET
     - 请求路径：/insurance_products/product_info
     - 请求参数：
-        - user_id: 用户ID
         - product_id: 产品ID
         - product_type: 产品类型
     - 返回体：
