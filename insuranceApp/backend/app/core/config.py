@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: str = "5432"
     POSTGRES_DB: str = "insurance_app"
-    
+
     # 数据库URL
     DATABASE_URL: Optional[PostgresDsn] = None
 
@@ -75,5 +75,5 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-print(f"====> 配置加载完成，AI_MODULE_KEYS: {settings.AI_MODULE_KEYS}")
+print(f"====> 配置加载完成，AI_MODULE_KEYS: {settings.AI_MODULE_KEYS}") 
 print(f"====> 数据库连接: {settings.DATABASE_URL}") 

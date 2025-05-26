@@ -235,6 +235,16 @@ insuranceApp/
         - message: 查询成功或失败信息
         - 其余字段根据~/insuranceApp/backend/sql/表说明.md中的表结构返回
 
+- 数据库操作API
+    - 请求方式：POST
+    - 请求路径：/database_operation
+    - 请求参数：
+        - operation：sql语句
+    - 返回体：
+        - code:状态码
+        - message: 操作成功或失败信息
+        - data: 操作结果
+
 ### 后端数据库
 - 目前先采用postgresql数据库
 - 数据库表结构

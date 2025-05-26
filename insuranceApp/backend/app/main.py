@@ -59,7 +59,7 @@ app.include_router(
 @app.get("/api/health")
 def health_check():
     """健康检查接口"""
-    return {"status": "ok"}
+    return {"status": "ok"} 
 
 
 @app.on_event("startup")

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/dify_models.dart';
+import '../models/insurance_product.dart';
 import '../services/chat_service.dart';
 import '../widgets/ai_welcome_view.dart';
 import '../widgets/chat_message_item.dart';
@@ -156,6 +157,25 @@ class _ConversationPageState extends State<ConversationPage> {
     chatService.sendFeedback(messageId, rating);
   }
   
+  // 处理保险产品选择
+  void _handleProductSelected(InsuranceProduct product) {
+    print('保险产品被选中: ${product.productName}');
+    
+    // 暂时只是打印信息，后续会跳转到产品详情页
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('您选择了: ${product.productName}'),
+        action: SnackBarAction(
+          label: '查看详情',
+          onPressed: () {
+            // TODO: 跳转到产品详情页
+            print('准备跳转到产品详情页，产品ID: ${product.productId}');
+          },
+        ),
+      ),
+    );
+  }
+  
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).primaryColor;
@@ -249,6 +269,7 @@ class _ConversationPageState extends State<ConversationPage> {
                 isLastMessage: isLastMessage,
                 isResponding: chatService.isSending && isLastMessage,
                 onFeedback: _sendFeedback,
+                onProductSelected: _handleProductSelected,
               ),
             );
             
@@ -281,6 +302,7 @@ class _ConversationPageState extends State<ConversationPage> {
                 isLastMessage: isLastMessage,
                 isResponding: chatService.isSending && isLastMessage,
                 onFeedback: _sendFeedback,
+                onProductSelected: _handleProductSelected,
               ),
             );
             

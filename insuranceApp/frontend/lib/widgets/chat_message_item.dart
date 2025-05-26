@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../models/dify_models.dart';
+import '../models/insurance_product.dart';
+import 'insurance_product_card.dart';
+import 'dart:convert';
+import 'dart:math' show min;
 
 /// 聊天消息项组件
 class ChatMessageItem extends StatelessWidget {
@@ -8,6 +12,7 @@ class ChatMessageItem extends StatelessWidget {
   final bool isLastMessage;
   final bool isResponding;
   final Function(String, String?)? onFeedback;
+  final Function(InsuranceProduct)? onProductSelected;
 
   const ChatMessageItem({
     Key? key,
@@ -15,6 +20,7 @@ class ChatMessageItem extends StatelessWidget {
     this.isLastMessage = false,
     this.isResponding = false,
     this.onFeedback,
+    this.onProductSelected,
   }) : super(key: key);
 
   @override
@@ -80,26 +86,7 @@ class ChatMessageItem extends StatelessWidget {
                           if (isResponding && isLastMessage && (message.answer == null || message.answer!.isEmpty))
                             _buildLoadingAnimation()
                           else
-                            MarkdownBody(
-                              data: message.answer ?? '',
-                              selectable: true,
-                              styleSheet: MarkdownStyleSheet(
-                                p: const TextStyle(
-                                  fontSize: 16,
-                                  height: 1.5,
-                                  color: Colors.black87,
-                                ),
-                                code: TextStyle(
-                                  fontSize: 14,
-                                  backgroundColor: Colors.grey.withAlpha(51),
-                                  fontFamily: 'monospace',
-                                ),
-                                codeblockDecoration: BoxDecoration(
-                                  color: Colors.grey.withAlpha(51),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                            ),
+                            _buildMessageContent(context, message.answer ?? ''),
                             
                           // 显示文件（图片等）
                           if (message.messageFiles != null && message.messageFiles!.isNotEmpty)
@@ -176,6 +163,171 @@ class ChatMessageItem extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+  
+  /// 构建消息内容，支持保险产品卡片渲染
+  Widget _buildMessageContent(BuildContext context, String answer) {
+    print('解析聊天消息: ${answer.length > 100 ? answer.substring(0, 100) + '...' : answer}');
+    
+    // 检测是否包含JSON代码块
+    final RegExp jsonBlockRegex = RegExp(r'```json\s*([\s\S]*?)\s*```');
+    final matches = jsonBlockRegex.allMatches(answer);
+    
+    if (matches.isNotEmpty) {
+      // 尝试解析保险产品
+      final products = InsuranceProduct.fromMarkdown(answer);
+      print('识别到${products.length}个保险产品');
+      
+      if (products.isNotEmpty) {
+        // 处理消息中的文本内容，移除JSON代码块
+        String textContent = answer;
+        for (final match in matches) {
+          textContent = textContent.replaceRange(
+            match.start, 
+            match.end, 
+            ''
+          );
+        }
+        
+        // 移除多余的空行
+        textContent = textContent.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 显示文本内容，如果有的话
+            if (textContent.trim().isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: MarkdownBody(
+                  data: textContent,
+                  selectable: true,
+                  styleSheet: MarkdownStyleSheet(
+                    p: const TextStyle(
+                      fontSize: 16,
+                      height: 1.5,
+                      color: Colors.black87,
+                    ),
+                    code: TextStyle(
+                      fontSize: 14,
+                      backgroundColor: Colors.grey.withAlpha(51),
+                      fontFamily: 'monospace',
+                    ),
+                    codeblockDecoration: BoxDecoration(
+                      color: Colors.grey.withAlpha(51),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            
+            // 显示保险产品卡片
+            InsuranceProductCardList(
+              products: products,
+              onProductSelected: onProductSelected,
+            ),
+          ],
+        );
+      }
+    } else {
+      // 如果没有找到标准的JSON代码块，尝试检测可能的非标准格式JSON
+      try {
+        // 检查是否包含类似JSON的内容（在方括号或大括号中的内容）
+        final RegExp bracketContentRegex = RegExp(r'\[\s*\{[\s\S]*?\}\s*\]|\{\s*"[\s\S]*?\}\s*');
+        final bracketMatches = bracketContentRegex.allMatches(answer);
+        
+        if (bracketMatches.isNotEmpty) {
+          for (final match in bracketMatches) {
+            final content = match.group(0)!;
+            try {
+              // 尝试解析内容为JSON
+              final dynamic parsed = json.decode(content);
+              if (parsed != null) {
+                print('检测到可能的JSON内容: ${content.substring(0, min(100, content.length))}...');
+                
+                // 构造带有JSON代码块的Markdown
+                final jsonMarkdown = '```json\n$content\n```';
+                final products = InsuranceProduct.fromMarkdown(jsonMarkdown);
+                
+                if (products.isNotEmpty) {
+                  print('成功解析出${products.length}个保险产品');
+                  
+                  // 处理消息中的文本内容，移除JSON内容
+                  String textContent = answer;
+                  textContent = textContent.replaceRange(match.start, match.end, '');
+                  
+                  // 移除多余的空行
+                  textContent = textContent.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+                  
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 显示文本内容，如果有的话
+                      if (textContent.trim().isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16.0),
+                          child: MarkdownBody(
+                            data: textContent,
+                            selectable: true,
+                            styleSheet: MarkdownStyleSheet(
+                              p: const TextStyle(
+                                fontSize: 16,
+                                height: 1.5,
+                                color: Colors.black87,
+                              ),
+                              code: TextStyle(
+                                fontSize: 14,
+                                backgroundColor: Colors.grey.withAlpha(51),
+                                fontFamily: 'monospace',
+                              ),
+                              codeblockDecoration: BoxDecoration(
+                                color: Colors.grey.withAlpha(51),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ),
+                      
+                      // 显示保险产品卡片
+                      InsuranceProductCardList(
+                        products: products,
+                        onProductSelected: onProductSelected,
+                      ),
+                    ],
+                  );
+                }
+              }
+            } catch (e) {
+              print('尝试解析可能的JSON内容失败: $e');
+            }
+          }
+        }
+      } catch (e) {
+        print('检测非标准格式JSON时出错: $e');
+      }
+    }
+    
+    // 默认渲染为Markdown
+    return MarkdownBody(
+      data: answer,
+      selectable: true,
+      styleSheet: MarkdownStyleSheet(
+        p: const TextStyle(
+          fontSize: 16,
+          height: 1.5,
+          color: Colors.black87,
+        ),
+        code: TextStyle(
+          fontSize: 14,
+          backgroundColor: Colors.grey.withAlpha(51),
+          fontFamily: 'monospace',
+        ),
+        codeblockDecoration: BoxDecoration(
+          color: Colors.grey.withAlpha(51),
+          borderRadius: BorderRadius.circular(8),
+        ),
       ),
     );
   }
