@@ -6,6 +6,7 @@ from sqlalchemy import text, inspect
 from app.db.base import Base, engine
 from app.db.sql_importer import SQLImporter
 from app.models.user import User
+from app.models.user_info import UserInfo
 
 logger = logging.getLogger(__name__)
 

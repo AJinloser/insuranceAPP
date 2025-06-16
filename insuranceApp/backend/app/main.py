@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.api.auth import router as auth_router
 from app.api.ai_modules import router as ai_modules_router
 from app.api.insurance_products import router as insurance_products_router
+from app.api.user_info import router as user_info_router
 from app.core.config import settings
 from app.db.base import Base, engine, get_db
 from app.db.init_db import init_db
@@ -54,6 +55,7 @@ app.include_router(
     prefix="/api/v1/insurance_products", 
     tags=["保险产品"]
 )
+app.include_router(user_info_router, prefix="/api/v1", tags=["用户个人信息"])
 
 
 @app.get("/api/health")

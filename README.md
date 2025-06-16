@@ -122,6 +122,20 @@ insuranceApp/
     - 根据不同的保险产品类型展示不同的信息，具体由~/insuranceApp/backend/sql/表说明.md中的表结构决定
     - 页面左上角需要包含一个返回按钮，点击后返回保险产品列表页面
 
+- **个人中心页面**
+    - 个人中心页面目前只需展示用户个人信息
+    - ui风格与当前app的其他页面一致
+    - 个人中心页面包含一个顶部栏，一个用户个人信息卡片
+    - 点击用户个人信息卡片后，可以进入**用户个人信息编辑页面**
+        - 用户个人信息编辑页面包含一个顶部栏，顶部栏左上角有一个返回按钮，用于返回个人中心页面
+        - 进入用户个人中心页面后，通过GET /user_info获取用户个人信息
+        - 将获取到的用户个人信息用合适的方式展示，个人信息格式具体可参考后端数据库中用户个人信息表的表结构
+        - 展示ui风格与当前app的其他页面一致，可以适当使用卡片的形式
+        - 用户可以通过直接点击对应字段进行编辑（点击后，字段变为输入框，用户可以输入内容）
+            - 对于family_info中的family_members，可以点击添加或删除按钮，添加或删除一个家庭成员
+            - 对于goal_info中的goals，可以点击添加或删除按钮，添加或删除一个目标
+        - 用户个人信息编辑页面底部包含一个保存按钮，点击后，通过API POST /user_info更新用户个人信息
+        
 
     
 ### 后端API
@@ -235,15 +249,37 @@ insuranceApp/
         - message: 查询成功或失败信息
         - 其余字段根据~/insuranceApp/backend/sql/表说明.md中的表结构返回
 
-- 数据库操作API
-    - 请求方式：POST
-    - 请求路径：/database_operation
+- 获取用户个人信息API
+    - 请求方式：GET
+    - 请求路径：/user_info
     - 请求参数：
-        - operation：sql语句
+        - user_id: 用户ID
     - 返回体：
         - code:状态码
-        - message: 操作成功或失败信息
-        - data: 操作结果
+        - message: 获取用户个人信息成功或失败信息
+        - user_info: 用户个人信息（包含数据库中用户基本信息表的全部字段）
+            - basic_info: 用户基本信息
+            - financial_info: 用户财务信息
+            - risk_info: 用户风险偏好信息
+            - retirement_info: 用户退休信息
+            - family_info: 用户家庭信息
+            - goal_info: 用户目标信息
+            - other_info: 其他信息
+
+- 更新用户个人信息API
+    - 请求方式：POST
+    - 请求路径：/user_info
+    - 请求参数：
+        - user_id: 用户ID
+        - user_info: 用户个人信息（包含数据库中用户个人信息表的全部字段）
+        - 后端根据user_id和传回来的user_info更新数据库中用户个人信息表的对应字段
+    - 返回体：
+        - code:状态码
+        - message: 更新用户个人信息成功或失败信息
+
+
+
+
 
 ### 后端数据库
 - 目前先采用postgresql数据库
@@ -257,3 +293,31 @@ insuranceApp/
         - 从~/insuranceApp/backend/sql/表说明.md中获取表结构
         - 从~/insuranceApp/backend/sql/*中获取sql文件
         - 由于有7种保险产品，所以有7个表，每个表的表名和表结构在~/insuranceApp/backend/sql/表说明.md中都有说明
+
+    - 用户个人信息表（用于存储用户个人信息）
+        所有字段都为jsonb类型,并且具体内容使用字符串存储
+        - basic_info: 用户基本信息
+            - age:年龄
+            - city:城市
+            - gender:性别
+        - financial_info: 用户财务信息
+            - occupation: 职业
+            - income: 收入
+            - expenses: 支出
+            - assets: 资产
+            - liabilities: 负债
+        - risk_info:
+            - risk_aversion: 风险厌恶程度
+        - retirement_info: 退休信息
+            - retirement_age: 退休年龄
+            - retirement_income: 退休收入
+        - family_info: 家庭信息（可以有多个家庭成员）
+            - family_members: 家庭成员列表
+                - relation: 关系
+                - age: 年龄
+                - occupation: 职业
+                - income: 收入
+        - goal_info: 目标(可以有多个目标)
+            - goals: 目标列表
+                - goal_details: 目标详情
+        - other_info: 其他信息

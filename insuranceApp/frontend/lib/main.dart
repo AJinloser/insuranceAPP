@@ -8,6 +8,7 @@ import 'pages/menu_page.dart';
 import 'screens/login_screen.dart';
 import 'services/auth_service.dart';
 import 'services/chat_service.dart';
+import 'services/user_info_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,6 +40,10 @@ void main() async {
       providers: [
         ChangeNotifierProvider.value(value: authService),
         ChangeNotifierProvider.value(value: chatService),
+        ChangeNotifierProxyProvider<AuthService, UserInfoService>(
+          create: (context) => UserInfoService(authService),
+          update: (context, auth, previous) => previous ?? UserInfoService(auth),
+        ),
       ],
       child: const MyApp(),
     ),
