@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'pages/conversation_page.dart';
 import 'pages/home_page.dart';
 import 'pages/menu_page.dart';
+import 'pages/profile_setup_page.dart';
 import 'screens/login_screen.dart';
 import 'services/auth_service.dart';
 import 'services/chat_service.dart';
@@ -110,10 +111,12 @@ class MyApp extends StatelessWidget {
         if (settings.name == '/home') {
           final args = settings.arguments as Map<String, dynamic>?;
           final conversationId = args?['conversationId'] as String?;
+          final initialTabIndex = args?['initialTabIndex'] as int?;
           
           return MaterialPageRoute(
             builder: (context) => HomePage(
               conversationId: conversationId,
+              initialTabIndex: initialTabIndex,
             ),
           );
         }
@@ -125,16 +128,41 @@ class MyApp extends StatelessWidget {
           );
         }
         
+        // 处理个人信息初始化页面路由
+        if (settings.name == '/profile-setup') {
+          return MaterialPageRoute(
+            builder: (context) => const ProfileSetupPage(),
+          );
+        }
+        
         return null;
       },
       home: Consumer<AuthService>(
         builder: (context, authService, child) {
+          debugPrint('===> MaterialApp: AuthStatus = ${authService.authStatus}, isNewUser = ${authService.isNewUser}, shouldShowProfile = ${authService.shouldShowProfile}');
+          
           switch (authService.authStatus) {
             case AuthStatus.authenticated:
-              // 登录成功后跳转到首页（带导航栏的主页）
+              // 如果是新注册的用户，显示个人信息初始化页面
+              if (authService.isNewUser) {
+                debugPrint('===> MaterialApp: 显示个人信息初始化页面');
+                return const ProfileSetupPage();
+              }
+              // 如果应该显示个人中心，则显示个人中心标签页
+              if (authService.shouldShowProfile) {
+                debugPrint('===> MaterialApp: 显示个人中心页面');
+                // 重置标志，避免重复显示
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  authService.resetShowProfile();
+                });
+                return const HomePage(initialTabIndex: 3); // 3对应个人中心标签页
+              }
+              // 否则显示主页
+              debugPrint('===> MaterialApp: 显示主页');
               return const HomePage();
             case AuthStatus.unauthenticated:
             case AuthStatus.unknown:
+              debugPrint('===> MaterialApp: 显示登录页面');
               return const LoginScreen();
           }
         },

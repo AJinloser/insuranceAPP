@@ -9,6 +9,7 @@ class CustomTextField extends StatelessWidget {
   final String? Function(String?)? validator;
   final TextInputType keyboardType;
   final bool isError;
+  final String? hintText;
 
   const CustomTextField({
     Key? key,
@@ -20,6 +21,7 @@ class CustomTextField extends StatelessWidget {
     this.validator,
     this.keyboardType = TextInputType.text,
     this.isError = false,
+    this.hintText,
   }) : super(key: key);
 
   @override
@@ -40,6 +42,8 @@ class CustomTextField extends StatelessWidget {
             color: isError ? Colors.red : Colors.grey[600],
             fontSize: 15.0,
           ),
+          hintText: hintText,
+          hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
           prefixIcon: prefixIcon != null 
               ? Icon(prefixIcon, color: isError ? Colors.red : primaryColor, size: 22) 
               : null,

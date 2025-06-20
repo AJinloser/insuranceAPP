@@ -58,12 +58,15 @@ class _LoginScreenState extends State<LoginScreen> {
         _hasError = false;
       });
 
+      print('===> 开始表单提交，模式: $_mode');
+
       final authService = Provider.of<AuthService>(context, listen: false);
       try {
         bool success = false;
 
         switch (_mode) {
           case LoginMode.login:
+            print('===> 执行登录操作');
             success = await authService.login(
               _accountController.text,
               _passwordController.text,
@@ -73,12 +76,15 @@ class _LoginScreenState extends State<LoginScreen> {
             }
             break;
           case LoginMode.register:
+            print('===> 执行注册操作');
             success = await authService.register(
               _accountController.text,
               _passwordController.text,
             );
+            print('===> 注册结果: $success');
             break;
           case LoginMode.resetPassword:
+            print('===> 执行重置密码操作');
             success = await authService.resetPassword(
               _accountController.text,
               _passwordController.text,
@@ -87,10 +93,14 @@ class _LoginScreenState extends State<LoginScreen> {
         }
 
         if (success && mounted) {
-          // 导航到主页
-          // Navigator.of(context).pushReplacementNamed('/home');
+          print('===> 操作成功，AuthService状态已更新，将自动处理页面导航');
+          // AuthService状态变化会自动触发MaterialApp中的Consumer重新构建
+          // 不需要手动导航
+        } else {
+          print('===> 操作失败或组件已销毁');
         }
       } catch (e) {
+        print('===> 操作异常: $e');
         setState(() {
           _hasError = true;
         });

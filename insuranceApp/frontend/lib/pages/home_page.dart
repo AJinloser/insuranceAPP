@@ -7,8 +7,9 @@ import '../widgets/coming_soon_page.dart';
 
 class HomePage extends StatefulWidget {
   final String? conversationId;
+  final int? initialTabIndex;
   
-  const HomePage({Key? key, this.conversationId}) : super(key: key);
+  const HomePage({Key? key, this.conversationId, this.initialTabIndex}) : super(key: key);
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -39,6 +40,9 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    
+    // 设置初始标签页索引
+    _selectedIndex = widget.initialTabIndex ?? 0;
     
     // 初始化页面列表，并传递conversationId给ConversationPage
     _pages = [
