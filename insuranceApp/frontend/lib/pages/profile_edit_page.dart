@@ -379,6 +379,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                       labelText: '关系',
                       border: OutlineInputBorder(),
                       isDense: true,
+                      hintText: '例如：配偶、子女、父母等',
+                      hintStyle: TextStyle(fontSize: 13, color: Colors.grey),
                     ),
                   ),
                 ),
@@ -390,6 +392,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                       labelText: '年龄',
                       border: OutlineInputBorder(),
                       isDense: true,
+                      hintText: '请输入实际年龄',
+                      hintStyle: TextStyle(fontSize: 13, color: Colors.grey),
                     ),
                   ),
                 ),
@@ -405,6 +409,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                       labelText: '职业',
                       border: OutlineInputBorder(),
                       isDense: true,
+                      hintText: '例如：学生、教师等',
+                      hintStyle: TextStyle(fontSize: 13, color: Colors.grey),
                     ),
                   ),
                 ),
@@ -416,6 +422,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                       labelText: '收入',
                       border: OutlineInputBorder(),
                       isDense: true,
+                      hintText: '例如：8000元/月',
+                      hintStyle: TextStyle(fontSize: 13, color: Colors.grey),
                     ),
                   ),
                 ),
@@ -499,6 +507,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                 labelText: '目标详情',
                 border: OutlineInputBorder(),
                 isDense: true,
+                hintText: '请描述您的财务目标，例如：5年内购买一套200万的房产、为子女准备100万教育金、计划60岁退休后每月有15000元收入等',
+                hintStyle: TextStyle(fontSize: 13, color: Colors.grey),
               ),
               maxLines: 3,
             ),
@@ -586,7 +596,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                       labelText: '字段名称',
                       border: OutlineInputBorder(),
                       isDense: true,
-                      hintText: '例如：爱好、备注等',
+                      hintText: '例如：爱好、健康状况、保险需求等',
+                      hintStyle: TextStyle(fontSize: 13, color: Colors.grey),
                     ),
                   ),
                 ),
@@ -599,7 +610,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                       labelText: '字段内容',
                       border: OutlineInputBorder(),
                       isDense: true,
-                      hintText: '输入具体内容',
+                      hintText: '请填写具体内容，例如：旅游、高血压家族史、希望有一份重疾保障等',
+                      hintStyle: TextStyle(fontSize: 13, color: Colors.grey),
                     ),
                     maxLines: 2,
                   ),
@@ -613,6 +625,52 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   }
 
   Widget _buildTextField(String label, TextEditingController controller, IconData icon) {
+    String hintText = '';
+    
+    // 根据不同的标签提供不同的提示信息
+    switch(label) {
+      // 基本信息
+      case '年龄':
+        hintText = '请输入您的实际年龄，例如：35岁';
+        break;
+      case '城市':
+        hintText = '请输入您当前居住的城市，例如：上海';
+        break;
+      case '性别':
+        hintText = '请输入您的性别，例如：男/女/其他';
+        break;
+        
+      // 财务信息
+      case '职业':
+        hintText = '请输入您的职业，例如：软件工程师、教师等';
+        break;
+      case '收入':
+        hintText = '可按格式填写，例如：10000元/月或120000元/年';
+        break;
+      case '支出':
+        hintText = '请填写您的月均支出，例如：5000元/月';
+        break;
+      case '资产':
+        hintText = '请填写您的主要资产及价值，例如：房产200万、车20万等，也可以给出具体房产的位置或车的品牌，能够帮助我们更好地了解您的资产情况';
+        break;
+      case '负债':
+        hintText = '请填写您的负债情况，例如：房贷100万、车贷10万等，也可以给出具体缴纳的期限等有用信息。';
+        break;
+        
+      // 风险信息
+      case '风险厌恶程度':
+        hintText = '请填写您的风险厌恶程度，例如：高/中/低，高代表非常厌恶风险';
+        break;
+        
+      // 退休信息
+      case '退休年龄':
+        hintText = '请填写您计划的退休年龄，例如：60岁';
+        break;
+      case '退休收入':
+        hintText = '请填写您期望的退休月收入，例如：8000元/月';
+        break;
+    }
+    
     return TextFormField(
       controller: controller,
       decoration: InputDecoration(
@@ -620,6 +678,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         prefixIcon: Icon(icon),
         border: const OutlineInputBorder(),
         isDense: true,
+        hintText: hintText,
+        hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
       ),
     );
   }
