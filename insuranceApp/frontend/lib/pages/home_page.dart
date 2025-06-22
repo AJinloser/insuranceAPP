@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'conversation_page.dart';
+import 'insurance_page.dart';
 import 'profile_page.dart';
 import '../widgets/coming_soon_page.dart';
 // import './menu_page.dart';
@@ -47,7 +48,7 @@ class _HomePageState extends State<HomePage> {
     // 初始化页面列表，并传递conversationId给ConversationPage
     _pages = [
       ConversationPage(conversationId: widget.conversationId), // 智能助手页面（对话页面）
-      const ComingSoonPage(title: '保险页面'),
+      const InsurancePage(), // 保险页面
       const ComingSoonPage(title: '财务规划页面'),
       const ProfilePage(), // 个人中心页面
     ];

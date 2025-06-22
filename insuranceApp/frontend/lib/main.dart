@@ -9,6 +9,7 @@ import 'pages/profile_setup_page.dart';
 import 'screens/login_screen.dart';
 import 'services/auth_service.dart';
 import 'services/chat_service.dart';
+import 'services/insurance_service.dart';
 import 'services/user_info_service.dart';
 
 void main() async {
@@ -36,11 +37,15 @@ void main() async {
     debugPrint("===> ChatService初始化失败: $e");
   }
   
+  // 初始化保险服务
+  final insuranceService = InsuranceService();
+  
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: authService),
         ChangeNotifierProvider.value(value: chatService),
+        ChangeNotifierProvider.value(value: insuranceService),
         ChangeNotifierProxyProvider<AuthService, UserInfoService>(
           create: (context) => UserInfoService(authService),
           update: (context, auth, previous) => previous ?? UserInfoService(auth),

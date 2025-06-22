@@ -51,6 +51,26 @@ class ApiService {
     );
   }
 
+  // 通用GET请求
+  Future<Response> get(String path, {Map<String, dynamic>? queryParameters}) async {
+    return await _dio.get(path, queryParameters: queryParameters);
+  }
+
+  // 通用POST请求
+  Future<Response> post(String path, {dynamic data, Map<String, dynamic>? queryParameters}) async {
+    return await _dio.post(path, data: data, queryParameters: queryParameters);
+  }
+
+  // 通用PUT请求
+  Future<Response> put(String path, {dynamic data, Map<String, dynamic>? queryParameters}) async {
+    return await _dio.put(path, data: data, queryParameters: queryParameters);
+  }
+
+  // 通用DELETE请求
+  Future<Response> delete(String path, {Map<String, dynamic>? queryParameters}) async {
+    return await _dio.delete(path, queryParameters: queryParameters);
+  }
+
   // 登录
   Future<AuthResponse> login(String account, String password) async {
     try {
