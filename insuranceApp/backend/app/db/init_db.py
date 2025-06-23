@@ -7,6 +7,7 @@ from app.db.base import Base, engine
 from app.db.sql_importer import SQLImporter
 from app.models.user import User
 from app.models.user_info import UserInfo
+from app.models.insurance_list import InsuranceList
 
 logger = logging.getLogger(__name__)
 

@@ -4,6 +4,7 @@ import '../models/insurance_product.dart';
 import '../services/insurance_service.dart';
 import '../widgets/insurance_product_card.dart';
 import 'product_detail_page.dart';
+import 'user_insurance_list_page.dart';
 
 class InsurancePage extends StatefulWidget {
   const InsurancePage({Key? key}) : super(key: key);
@@ -448,7 +449,98 @@ class _InsurancePageState extends State<InsurancePage> with TickerProviderStateM
         
         // 分页器
         if (_totalPages > 1) _buildPagination(),
+        
+        // "我的保单"卡片
+        _buildMyInsuranceCard(),
       ],
+    );
+  }
+
+  /// 构建"我的保单"卡片
+  Widget _buildMyInsuranceCard() {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const UserInsuranceListPage(),
+            ),
+          );
+        },
+        child: Card(
+          elevation: 3,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.purple.shade100,
+                  Colors.purple.shade50,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                // 图标
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.shade200.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                  child: Icon(
+                    Icons.assignment,
+                    color: Colors.purple.shade700,
+                    size: 24,
+                  ),
+                ),
+                
+                const SizedBox(width: 16),
+                
+                // 文字内容
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '我的保单',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.purple.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '查看和管理您已添加的保险产品',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.purple.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // 箭头
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.purple.shade600,
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 

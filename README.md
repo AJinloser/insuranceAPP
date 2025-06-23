@@ -109,11 +109,26 @@ insuranceApp/
         - 卡片右端有查看详情按钮，点击后转至具体保险产品信息页面
         - 卡片列表末尾有页码，可以通过点击页码或点击页码左右两端的切换页按钮来切换页，切换页会向后端请求对应页的保险产品列表
         - 卡片列表的右上角有排序按钮，用类似下拉表单的方式，点击后可以选择按照什么字段排序（会重新向后端请求数据）
+    - **新添加保单相关部分**
+        - 在卡片列表下方，添加一个淡紫色的卡片为‘我的保单’，点击后转至用户保单页面
+
+- **用户保单页面**
+    - 用户保单页面包含一个顶部栏，顶部栏左侧为返回按钮，用于返回保险页面。
+    - 进入用户保单页面后，通过 GET /insurance_list/get 获取用户保单信息
+    - 再通过获得到的用户保单信息，通过GET /insurance_products/product_info获取每个保险产品的详细信息
+    - 使用保险产品卡片的形式，用卡片列表展示用户保单中的保险产品，卡片形式与保险产品列表页面中的卡片形式一致
+    - 顶部栏下方，卡片列表右上方有一个修改按钮，点击后可以进入修改模式
+        - 进入修改模式后，所有卡片可勾选
+        - 修改模式中，页面底部包含一个删除按钮
+        - 勾选后，可以点击点击删除按钮，删除勾选的保险产品
+        - 通过POST /insurance_list/update更新用户保单信息表中的对应字段
+    
 
 - **具体保险产品信息页面**
     - 点击查看详情后进入，使用对应保险产品id通过GET /insurance_products/product_info获取具体保险产品信息
     - 根据不同的保险产品类型展示不同的信息，具体由~/insuranceApp/backend/sql/表说明.md中的表结构决定
     - 页面左上角需要包含一个返回按钮，点击后返回保险产品列表页面
+    - **新添加保单相关部分** 在保险产品信息页面的底部，添加一个添加保单按钮，点击后调用POST /insurance_list/add将保险产品信息添加到用户保单信息表中
 
 - **个人中心页面**
     - 个人中心页面目前只需展示用户个人信息
@@ -288,7 +303,32 @@ insuranceApp/
         - message: 更新用户个人信息成功或失败信息
 
 
+- 获取用户保单信息API
+    - 请求方式：GET
+    - 请求路径： /insurance_list/get
+    - 请求参数：
+        - user_id: 用户ID
+    - 返回体：
+        - code:状态码
+        - message: 获取用户保单信息成功或失败信息
+        - insurance_list: 用户保单信息列表,每个列表元素为一个包含product_id和product_type的jsonb对象
 
+- 添加保险产品进入保单API
+    - 请求方式：POST
+    - 请求路径：/insurance_list/add
+    - 请求参数：
+        - user_id: 用户ID
+        - product_id: 产品ID
+        - product_type: 产品类型
+    - 后端根据user_id和product_id、product_type将保险产品信息添加到用户保单信息表中
+
+- 更新用户保单API
+    - 请求方式：POST
+    - 请求路径：/insurance_list/update
+    - 请求参数：
+        - user_id: 用户ID
+        - insurance_list: 用户保单信息列表,每个列表元素为一个包含product_id和product_type的jsonb对象
+    - 后端根据user_id和传回来的insurance_list更新用户保单信息表中的对应字段
 
 
 ### 后端数据库
@@ -331,3 +371,6 @@ insuranceApp/
             - goals: 目标列表
                 - goal_details: 目标详情
         - other_info: 其他信息
+
+    - 用户保单信息表（用于存储用户保单信息）
+        - insurance_list:储存用户拥有的保险产品信息，为列表，每个列表元素为一个包含product_id和product_type的jsonb对象

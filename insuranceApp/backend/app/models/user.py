@@ -16,4 +16,5 @@ class User(Base):
     password = Column(String, nullable=False)
     
     # 反向关系
-    user_info = relationship("UserInfo", back_populates="user", uselist=False) 
+    user_info = relationship("UserInfo", back_populates="user", uselist=False)
+    insurance_list = relationship("InsuranceList", back_populates="user", uselist=False) 

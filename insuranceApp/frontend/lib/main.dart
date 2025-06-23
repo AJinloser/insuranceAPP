@@ -6,10 +6,12 @@ import 'pages/conversation_page.dart';
 import 'pages/home_page.dart';
 import 'pages/menu_page.dart';
 import 'pages/profile_setup_page.dart';
+import 'pages/user_insurance_list_page.dart';
 import 'screens/login_screen.dart';
 import 'services/auth_service.dart';
 import 'services/chat_service.dart';
 import 'services/insurance_service.dart';
+import 'services/insurance_list_service.dart';
 import 'services/user_info_service.dart';
 
 void main() async {
@@ -40,12 +42,16 @@ void main() async {
   // 初始化保险服务
   final insuranceService = InsuranceService();
   
+  // 初始化保单服务
+  final insuranceListService = InsuranceListService();
+  
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: authService),
         ChangeNotifierProvider.value(value: chatService),
         ChangeNotifierProvider.value(value: insuranceService),
+        ChangeNotifierProvider.value(value: insuranceListService),
         ChangeNotifierProxyProvider<AuthService, UserInfoService>(
           create: (context) => UserInfoService(authService),
           update: (context, auth, previous) => previous ?? UserInfoService(auth),
@@ -137,6 +143,13 @@ class MyApp extends StatelessWidget {
         if (settings.name == '/profile-setup') {
           return MaterialPageRoute(
             builder: (context) => const ProfileSetupPage(),
+          );
+        }
+        
+        // 处理用户保单页面路由
+        if (settings.name == '/user-insurance-list') {
+          return MaterialPageRoute(
+            builder: (context) => const UserInsuranceListPage(),
           );
         }
         
