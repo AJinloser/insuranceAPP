@@ -13,6 +13,7 @@ import 'services/chat_service.dart';
 import 'services/insurance_service.dart';
 import 'services/insurance_list_service.dart';
 import 'services/user_info_service.dart';
+import 'services/goal_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,6 +46,9 @@ void main() async {
   // 初始化保单服务
   final insuranceListService = InsuranceListService();
   
+  // 初始化目标服务
+  final goalService = GoalService();
+  
   runApp(
     MultiProvider(
       providers: [
@@ -52,6 +56,7 @@ void main() async {
         ChangeNotifierProvider.value(value: chatService),
         ChangeNotifierProvider.value(value: insuranceService),
         ChangeNotifierProvider.value(value: insuranceListService),
+        ChangeNotifierProvider.value(value: goalService),
         ChangeNotifierProxyProvider<AuthService, UserInfoService>(
           create: (context) => UserInfoService(authService),
           update: (context, auth, previous) => previous ?? UserInfoService(auth),

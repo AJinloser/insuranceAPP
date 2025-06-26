@@ -5,9 +5,11 @@ from sqlalchemy import text, inspect
 
 from app.db.base import Base, engine
 from app.db.sql_importer import SQLImporter
+from app.db.migration import run_database_migration
 from app.models.user import User
 from app.models.user_info import UserInfo
 from app.models.insurance_list import InsuranceList
+from app.models.goal import Goal
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +59,10 @@ def init_db(db: Session) -> None:
     
     logger.info("创建数据库表...")
     Base.metadata.create_all(bind=engine)
+    
+    # 运行数据库迁移
+    logger.info("执行数据库迁移...")
+    run_database_migration(db)
     
     logger.info("导入SQL文件...")
     # 获取SQL文件目录路径

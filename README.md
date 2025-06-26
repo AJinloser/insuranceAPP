@@ -160,6 +160,28 @@ insuranceApp/
         - 以上字段均可以留空，留空则提交空值，即''。
         - 提交按钮点击后，通过API POST /user_info更新用户个人信息
         - 提交按钮点击后，转至个人中心页面
+
+
+- **规划页面**
+    - 规划页面包含一个顶部导航栏，能够在“目标”、“日程”、“规划”三个选项之间切换
+    - 先实现“目标”选项，“日程”和“规划”选项暂时不实现
+    - **目标**
+        - 目标页面目前由目标卡片列表构成，通过GET /goals/get_basic_info获取目标基本信息，然后通过目标卡片列表展示目标基本信息
+        - 能够通过POST /goals/update_basic_info进行新增目标，删除目标，编辑目标
+        - 目标卡片能够展示信息，包括：目标名称、目标描述、优先级、预计完成时间、目标金额、已完成金额即目标进度条
+        - 每个目标下有子目标和任务，目标卡片要能展示子目标和任务的个数
+        - 目标卡片需要展示子目标，包括子目标名称、子目标金额
+        - 点击目标卡片后，能够进入目标详情页面
+        - **目标详情页面**
+            - 目标详情页面包含一个顶部导航栏，能够返回目标页面
+            - 目标详情页面能够通过GET /goals/get_detail_info获取目标的详细信息，然后展示目标的详细信息
+            - 目标详情页面能够通过GET /goals/get_detail_info获取目标的详细信息，然后展示目标的详细信息
+            - 目标详情页面能够通过POST /goals/update_sub_goal展示并编辑子目标，对子目标进行新增、删除、编辑，编辑能够修改子目标的名称、描述、金额、预计完成时间等。
+                - 其中完成状态可以利用checkbox来表示，如果完成的话，checkbox被勾选，否则未勾选
+                - 预计完成时间可以利用日期选择器来表示，用户选择日期后，会自动转换为YYYY-MM-DD格式
+            - 目标详情页面能够通过POST /goals/update_sub_task展示并编辑任务，对任务进行标记完成操作（如果完成的话需要改变任务的状态），或者新增、删除、编辑。
+                - 其中完成状态可以利用checkbox来表示，如果完成的话，checkbox被勾选，否则未勾选
+                - 预计完成时间可以利用日期选择器来表示，用户选择日期后，会自动转换为YYYY-MM-DD格式
         
 
     
@@ -330,6 +352,108 @@ insuranceApp/
         - insurance_list: 用户保单信息列表,每个列表元素为一个包含product_id和product_type的jsonb对象
     - 后端根据user_id和传回来的insurance_list更新用户保单信息表中的对应字段
 
+- 获取目标基本信息API
+    - 请求方式：GET
+    - 请求路径：/goals/get_basic_info
+    - 请求参数：
+        - user_id: 用户ID
+    - 返回体：
+        - code:状态码
+        - message: 获取目标基本信息成功或失败信息
+        - goals: 目标列表
+            - goal_id: 目标ID
+            - goal_name: 目标名称
+            - goal_description: 目标描述
+            - priority: 优先级
+            - expected_completion_time: 预计完成时间
+            - target_amount: 目标金额
+            - completed_amount: 已完成金额
+            - sub_goals: 子目标列表
+                - sub_goal_id: 子目标ID
+                - sub_goal_name: 子目标名称
+                - sub_goal_amount: 子目标金额
+            - sub_task_num: 子任务总个数
+            - sub_task_completed_num: 子任务已完成个数
+
+- 更新目标基本信息API
+    - 请求方式：POST
+    - 请求路径：/goals/update_basic_info
+    - 请求参数：
+        - user_id: 用户ID
+        - goals: 目标列表
+            - goal_id: 目标ID
+            - goal_name: 目标名称
+            - goal_description: 目标描述
+            - priority: 优先级
+            - expected_completion_time: 预计完成时间
+            - target_amount: 目标金额
+            - completed_amount: 已完成金额
+            - 新建的目标默认子目标和子任务为空，而这个API不能编辑子目标和子任务，只能编辑目标的基本信息
+        - 后端根据user_id和传回来的goals更新数据库中目标表中的对应字段
+
+- 获取目标详细信息API
+    - 请求方式：GET
+    - 请求路径：/goals/get_detail_info
+    - 请求参数：
+        - user_id: 用户ID
+        - goal_id: 目标ID
+    - 返回体：
+        - code:状态码
+        - message: 获取目标详细信息成功或失败信息
+        - goal_detail: 目标详细信息
+            - goal_id: 目标ID
+            - goal_name: 目标名称
+            - goal_description: 目标描述
+            - priority: 优先级
+            - expected_completion_time: 预计完成时间
+            - target_amount: 目标金额
+            - completed_amount: 已完成金额
+            - sub_goals: 子目标列表
+                - sub_goal_id: 子目标ID
+                - sub_goal_name: 子目标名称
+                - sub_goal_description: 子目标描述
+                - sub_goal_amount: 子目标金额
+                - sub_goal_completion_time: 子目标预计完成时间
+                - sub_goal_status: 子目标状态
+            - sub_tasks: 子任务列表
+                - sub_task_id: 子任务ID
+                - sub_task_name: 子任务名称
+                - sub_task_description: 子任务描述
+                - sub_task_status: 子任务状态
+                - sub_task_completion_time: 子任务预计完成时间
+                - sub_task_amount: 子任务金额
+
+- 更新子目标API
+    - 请求方式：POST
+    - 请求路径：/goals/update_sub_goal
+    - 请求参数：
+        - user_id: 用户ID
+        - goal_id: 目标ID
+        - sub_goals: 子目标列表
+            - sub_goal_id: 子目标ID
+            - sub_goal_name: 子目标名称
+            - sub_goal_description: 子目标描述
+            - sub_goal_amount: 子目标金额
+            - sub_goal_completion_time: 子目标预计完成时间
+            - sub_goal_status: 子目标状态
+        - 后端根据user_id和传回来的sub_goals更新数据库中目标表中的对应字段,能够新增子目标，删除子目标，编辑子目标
+
+- 更新子任务API
+    - 请求方式：POST
+    - 请求路径：/goals/update_sub_task
+    - 请求参数：
+        - user_id: 用户ID
+        - goal_id: 目标ID
+        - sub_tasks: 子任务列表
+            - sub_task_id: 子任务ID
+            - sub_task_name: 子任务名称
+            - sub_task_description: 子任务描述
+            - sub_task_status: 子任务状态
+            - sub_task_completion_time: 子任务预计完成时间
+            - sub_task_amount: 子任务金额
+        - 后端根据user_id和传回来的sub_tasks更新数据库中目标表中的对应字段,能够新增子任务，删除子任务，编辑子任务
+        - 当子任务状态标记为完成时，需要对应的更新子任务的父目标的已完成金额，即增加父目标已完成金额的子任务金额对应的值
+
 
 ### 后端数据库
 - 目前先采用postgresql数据库
@@ -374,3 +498,29 @@ insuranceApp/
 
     - 用户保单信息表（用于存储用户保单信息）
         - insurance_list:储存用户拥有的保险产品信息，为列表，每个列表元素为一个包含product_id和product_type的jsonb对象
+
+
+    - 目标表（用于存储用户目标信息）
+        - goals: 目标列表
+            - 每个目标包含下列信息
+            - goal_id: 目标ID
+            - goal_name: 目标名称
+            - goal_description: 目标描述
+            - priority: 优先级
+            - expected_completion_time: 预计完成时间（格式为YYYY-MM-DD）
+            - target_amount: 目标金额
+            - completed_amount: 已完成金额
+            - sub_goals: 子目标列表
+                - sub_goal_id: 子目标ID
+                - sub_goal_name: 子目标名称
+                - sub_goal_description: 子目标描述
+                - sub_goal_amount: 子目标金额
+                - sub_goal_completion_time: 子目标预计完成时间（格式为YYYY-MM-DD）
+                - sub_goal_status: 子目标状态（表明是否完成）
+            - sub_tasks: 子任务列表
+                - sub_task_id: 子任务ID
+                - sub_task_name: 子任务名称
+                - sub_task_description: 子任务描述
+                - sub_task_status: 子任务状态（表明是否完成）
+                - sub_task_completion_time: 子任务预计完成时间（格式为YYYY-MM-DD）
+                - sub_task_amount: 子任务金额

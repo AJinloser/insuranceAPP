@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'conversation_page.dart';
 import 'insurance_page.dart';
 import 'profile_page.dart';
-import '../widgets/coming_soon_page.dart';
+import 'planning_page.dart';
 // import './menu_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -49,7 +49,7 @@ class _HomePageState extends State<HomePage> {
     _pages = [
       ConversationPage(conversationId: widget.conversationId), // 智能助手页面（对话页面）
       const InsurancePage(), // 保险页面
-      const ComingSoonPage(title: '财务规划页面'),
+      const PlanningPage(), // 财务规划页面
       const ProfilePage(), // 个人中心页面
     ];
   }
