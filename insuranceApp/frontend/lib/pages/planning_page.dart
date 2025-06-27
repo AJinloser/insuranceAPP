@@ -5,6 +5,7 @@ import '../models/goal.dart';
 import 'goal_detail_page.dart';
 import '../widgets/goal_card.dart';
 import '../widgets/coming_soon_page.dart';
+import 'schedule_page.dart';
 
 class PlanningPage extends StatefulWidget {
   const PlanningPage({Key? key}) : super(key: key);
@@ -79,7 +80,7 @@ class _PlanningPageState extends State<PlanningPage> with TickerProviderStateMix
         controller: _tabController,
         children: [
           _buildGoalsTab(),
-          const ComingSoonPage(title: '日程管理'),
+          const SchedulePage(),
           const ComingSoonPage(title: '财务规划'),
         ],
       ),

@@ -182,6 +182,14 @@ insuranceApp/
             - 目标详情页面能够通过POST /goals/update_sub_task展示并编辑任务，对任务进行标记完成操作（如果完成的话需要改变任务的状态），或者新增、删除、编辑。
                 - 其中完成状态可以利用checkbox来表示，如果完成的话，checkbox被勾选，否则未勾选
                 - 预计完成时间可以利用日期选择器来表示，用户选择日期后，会自动转换为YYYY-MM-DD格式
+    - **日程**
+        - 日程页面包含一个日历，能够选择日期（默认选择当前日期）
+        - 点击对应日期后，能够通过GET /goals/get_by_date获取对应日期的目标、子目标、子任务信息，然后通过卡片列表展示当前日期下目标、子目标、子任务信息
+        - 卡片列表仅需展示类型为目标/子目标/子任务，以及对应名称和对应金额，其中目标还需展示已完成金额/目标金额的进度条，子任务还需通过checkbox来表示完成状态
+        - 对于每个目标/子目标/子任务，能够通过右滑后点击修改日期按钮，通过POST /goals/update_date修改对应目标/子目标/子任务的预计完成时间（需要传入goal_id,sub_goal_id/sub_task_id,所以前端需要在GET /goals/get_by_date储存对应的id），修改日期后，卡片列表会自动更新
+        - 对于子任务，可以通过点击checkbox来，调用POST /goals/update_sub_task_status更新子任务状态，更新后，卡片列表会自动更新（如果对应父目标在当前日期下，则目标的已完成金额会自动更新）
+
+
         
 
     
@@ -454,6 +462,60 @@ insuranceApp/
         - 后端根据user_id和传回来的sub_tasks更新数据库中目标表中的对应字段,能够新增子任务，删除子任务，编辑子任务
         - 当子任务状态标记为完成时，需要对应的更新子任务的父目标的已完成金额，即增加父目标已完成金额的子任务金额对应的值
 
+- 通过日程时间获取目标、子目标、子任务API
+    - 请求方式：GET
+    - 请求路径：/goals/get_by_date
+    - 请求参数：
+        - user_id: 用户ID
+        - date: 日程时间
+    - 返回体：
+        - code:状态码
+        - message: 通过日程时间获取目标、子目标、子任务成功或失败信息
+        - goals: 目标列表
+            - goal_id: 目标ID
+            - goal_name: 目标名称
+            - target_amount: 目标金额
+            - completed_amount: 已完成金额
+            - sub_goals: 子目标列表
+                - sub_goal_id: 子目标ID
+                - sub_goal_name: 子目标名称
+                - sub_goal_amount: 子目标金额
+            - sub_tasks: 子任务列表
+                - sub_task_id: 子任务ID
+                - sub_task_name: 子任务名称
+                - sub_task_status: 子任务状态
+                - sub_task_amount: 子任务金额
+    - 后端根据user_id和date获取目标、子目标、子任务信息，并返回给前端
+
+- 通过id修改时间API
+    - 请求方式：POST
+    - 请求路径：/goals/update_date
+    - 请求参数：
+        - user_id: 用户ID
+        - type: 类型，goal_id或者sub_goal_id或者sub_task_id
+        - goal_id: 目标ID(子目标或子任务的父目标的id)
+        - sub_goal_id/sub_task_id: 子目标ID/子任务ID/none
+        - date: 时间
+    - 后端根据user_id和type、goal_id、sub_goal_id/sub_task_id、date更新数据库中目标表中的对应字段
+    - 返回体：
+        - code:状态码
+        - message: 通过id修改时间成功或失败信息
+
+- 通过id更新子任务状态API
+    - 请求方式：POST
+    - 请求路径：/goals/update_sub_task_status
+    - 请求参数：
+        - user_id: 用户ID
+        - goal_id: 目标ID(子任务的父目标的id)
+        - sub_task_id: 子任务ID
+        - sub_task_status: 子任务状态
+    - 后端根据user_id和sub_task_id更新数据库中目标表中的对应字段
+    - 注意：
+        - 如果子任务状态为从未完成变为完成，则需要更新子任务的父目标的已完成金额，即增加父目标已完成金额的子任务金额对应的值
+        - 如果子任务状态为从完成变为未完成，则需要减少父目标已完成金额的子任务金额对应的值
+    - 返回体：
+        - code:状态码
+        - message: 通过id更新子任务状态成功或失败信息
 
 ### 后端数据库
 - 目前先采用postgresql数据库

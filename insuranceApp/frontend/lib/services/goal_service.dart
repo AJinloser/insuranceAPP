@@ -335,4 +335,160 @@ class GoalService extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  // 新增：通过日期获取目标、子目标、子任务
+  Future<List<Goal>> getGoalsByDate(BuildContext context, String date) async {
+    try {
+      clearError();
+
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final userId = authService.userId;
+
+      if (userId == null) {
+        setError('用户未登录');
+        return [];
+      }
+
+      final url = Uri.parse('${backendUrl}/api/v1/goals/get_by_date?user_id=$userId&date=$date');
+      final response = await http.get(
+        url,
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      debugPrint('通过日期获取目标响应: ${response.statusCode}');
+      debugPrint('响应内容: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        
+        if (data['code'] == 200) {
+          return (data['goals'] as List<dynamic>)
+              .map((goalJson) => Goal.fromJson(goalJson as Map<String, dynamic>))
+              .toList();
+        } else {
+          setError(data['message'] ?? '获取日期目标失败');
+          return [];
+        }
+      } else {
+        setError('网络请求失败: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      debugPrint('通过日期获取目标失败: $e');
+      setError('获取日期目标失败: $e');
+      return [];
+    }
+  }
+
+  // 新增：修改目标/子目标/子任务的日期
+  Future<bool> updateDate(BuildContext context, {
+    required String type,
+    required String goalId,
+    String? subGoalId,
+    String? subTaskId,
+    required String date,
+  }) async {
+    try {
+      clearError();
+
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final userId = authService.userId;
+
+      if (userId == null) {
+        setError('用户未登录');
+        return false;
+      }
+
+      final url = Uri.parse('${backendUrl}/api/v1/goals/update_date');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'type': type,
+          'goal_id': goalId,
+          if (subGoalId != null) 'sub_goal_id': subGoalId,
+          if (subTaskId != null) 'sub_task_id': subTaskId,
+          'date': date,
+        }),
+      );
+
+      debugPrint('修改日期响应: ${response.statusCode}');
+      debugPrint('响应内容: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        
+        if (data['code'] == 200) {
+          // 更新成功后，刷新相关数据
+          await getGoalBasicInfo(context);
+          return true;
+        } else {
+          setError(data['message'] ?? '修改日期失败');
+          return false;
+        }
+      } else {
+        setError('网络请求失败: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('修改日期失败: $e');
+      setError('修改日期失败: $e');
+      return false;
+    }
+  }
+
+  // 新增：更新子任务状态
+  Future<bool> updateSubTaskStatus(BuildContext context, {
+    required String goalId,
+    required String subTaskId,
+    required bool status,
+  }) async {
+    try {
+      clearError();
+
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final userId = authService.userId;
+
+      if (userId == null) {
+        setError('用户未登录');
+        return false;
+      }
+
+      final url = Uri.parse('${backendUrl}/api/v1/goals/update_sub_task_status');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'goal_id': goalId,
+          'sub_task_id': subTaskId,
+          'sub_task_status': status,
+        }),
+      );
+
+      debugPrint('更新子任务状态响应: ${response.statusCode}');
+      debugPrint('响应内容: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        
+        if (data['code'] == 200) {
+          // 更新成功后，刷新相关数据
+          await getGoalBasicInfo(context);
+          return true;
+        } else {
+          setError(data['message'] ?? '更新子任务状态失败');
+          return false;
+        }
+      } else {
+        setError('网络请求失败: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      debugPrint('更新子任务状态失败: $e');
+      setError('更新子任务状态失败: $e');
+      return false;
+    }
+  }
 } 

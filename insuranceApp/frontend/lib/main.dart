@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'pages/conversation_page.dart';
 import 'pages/home_page.dart';
@@ -75,6 +76,15 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: '保险咨询APP',
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('zh', 'CN'),
+        Locale('en', 'US'),
+      ],
       theme: ThemeData(
         primarySwatch: Colors.purple,
         primaryColor: const Color(0xFF8E6FF7),

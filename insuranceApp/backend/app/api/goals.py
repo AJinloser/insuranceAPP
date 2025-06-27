@@ -21,6 +21,11 @@ from app.schemas.goal import (
     SubGoal,
     SubTask,
     ApiResponse,
+    GetGoalsByDateRequest,
+    GetGoalsByDateResponse,
+    UpdateDateRequest,
+    UpdateSubTaskStatusRequest,
+    ScheduleGoal,
 )
 
 router = APIRouter()
@@ -432,4 +437,253 @@ def update_sub_task(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"更新子任务失败: {str(e)}"
+        )
+
+
+# 新增的日程相关API
+
+@router.get("/goals/get_by_date", response_model=GetGoalsByDateResponse)
+def get_goals_by_date(
+    *,
+    db: Session = Depends(get_db),
+    user_id: str,
+    date: str,
+) -> Any:
+    """通过日期获取目标、子目标、子任务"""
+    try:
+        print(f"通过日期获取目标请求，user_id: {user_id}, date: {date}")
+        
+        # 验证用户是否存在
+        user = db.query(User).filter(User.user_id == user_id).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="用户不存在"
+            )
+        
+        # 查询目标记录
+        goal_record = db.query(Goal).filter(Goal.user_id == user_id).first()
+        
+        if not goal_record or not goal_record.goals:
+            return GetGoalsByDateResponse(
+                code=200,
+                message="通过日期获取目标成功",
+                goals=[]
+            )
+        
+        # 处理目标数据，筛选指定日期的目标、子目标和子任务
+        schedule_goals = []
+        for goal_data in goal_record.goals:
+            # 检查目标是否在指定日期
+            goal_matches = goal_data.get('expected_completion_time') == date
+            
+            # 筛选指定日期的子目标
+            matching_sub_goals = []
+            for sub_goal_data in goal_data.get('sub_goals', []):
+                if sub_goal_data.get('sub_goal_completion_time') == date:
+                    matching_sub_goals.append(SubGoal(**sub_goal_data))
+            
+            # 筛选指定日期的子任务
+            matching_sub_tasks = []
+            for sub_task_data in goal_data.get('sub_tasks', []):
+                if sub_task_data.get('sub_task_completion_time') == date:
+                    matching_sub_tasks.append(SubTask(**sub_task_data))
+            
+            # 如果目标本身或有匹配的子目标/子任务，则包含该目标
+            if goal_matches or matching_sub_goals or matching_sub_tasks:
+                schedule_goal = ScheduleGoal(
+                    goal_id=goal_data.get('goal_id', ''),
+                    goal_name=goal_data.get('goal_name', ''),
+                    target_amount=goal_data.get('target_amount'),
+                    completed_amount=goal_data.get('completed_amount', 0.0),
+                    sub_goals=matching_sub_goals,
+                    sub_tasks=matching_sub_tasks
+                )
+                schedule_goals.append(schedule_goal)
+        
+        return GetGoalsByDateResponse(
+            code=200,
+            message="通过日期获取目标成功",
+            goals=schedule_goals
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"通过日期获取目标失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"通过日期获取目标失败: {str(e)}"
+        )
+
+
+@router.post("/goals/update_date", response_model=ApiResponse)
+def update_date(
+    *,
+    db: Session = Depends(get_db),
+    request: UpdateDateRequest,
+) -> Any:
+    """通过id修改时间"""
+    try:
+        user_id = request.user_id
+        item_type = request.type
+        goal_id = request.goal_id
+        sub_goal_id = request.sub_goal_id
+        sub_task_id = request.sub_task_id
+        date = request.date
+        
+        print(f"修改时间请求，user_id: {user_id}, type: {item_type}, goal_id: {goal_id}, date: {date}")
+        
+        # 验证用户是否存在
+        user = db.query(User).filter(User.user_id == user_id).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="用户不存在"
+            )
+        
+        # 查询目标记录
+        goal_record = db.query(Goal).filter(Goal.user_id == user_id).first()
+        
+        if not goal_record:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="目标记录不存在"
+            )
+        
+        # 查找并更新指定的目标/子目标/子任务
+        goals_data = goal_record.goals or []
+        updated = False
+        
+        for i, goal_data in enumerate(goals_data):
+            if goal_data.get('goal_id') == goal_id:
+                if item_type == 'goal':
+                    # 更新目标时间
+                    goals_data[i]['expected_completion_time'] = date
+                    updated = True
+                    break
+                elif item_type == 'sub_goal' and sub_goal_id:
+                    # 更新子目标时间
+                    for j, sub_goal_data in enumerate(goal_data.get('sub_goals', [])):
+                        if sub_goal_data.get('sub_goal_id') == sub_goal_id:
+                            goals_data[i]['sub_goals'][j]['sub_goal_completion_time'] = date
+                            updated = True
+                            break
+                elif item_type == 'sub_task' and sub_task_id:
+                    # 更新子任务时间
+                    for j, sub_task_data in enumerate(goal_data.get('sub_tasks', [])):
+                        if sub_task_data.get('sub_task_id') == sub_task_id:
+                            goals_data[i]['sub_tasks'][j]['sub_task_completion_time'] = date
+                            updated = True
+                            break
+                
+                if updated:
+                    break
+        
+        if not updated:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="指定的目标/子目标/子任务不存在"
+            )
+        
+        # 更新数据库
+        goal_record.goals = goals_data
+        flag_modified(goal_record, 'goals')
+        db.commit()
+        db.refresh(goal_record)
+        
+        return ApiResponse(
+            code=200,
+            message="修改时间成功"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"修改时间失败: {e}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"修改时间失败: {str(e)}"
+        )
+
+
+@router.post("/goals/update_sub_task_status", response_model=ApiResponse)
+def update_sub_task_status(
+    *,
+    db: Session = Depends(get_db),
+    request: UpdateSubTaskStatusRequest,
+) -> Any:
+    """通过id更新子任务状态"""
+    try:
+        user_id = request.user_id
+        goal_id = request.goal_id
+        sub_task_id = request.sub_task_id
+        new_status = request.sub_task_status
+        
+        print(f"更新子任务状态请求，user_id: {user_id}, goal_id: {goal_id}, sub_task_id: {sub_task_id}, status: {new_status}")
+        
+        # 验证用户是否存在
+        user = db.query(User).filter(User.user_id == user_id).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="用户不存在"
+            )
+        
+        # 查询目标记录
+        goal_record = db.query(Goal).filter(Goal.user_id == user_id).first()
+        
+        if not goal_record:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="目标记录不存在"
+            )
+        
+        # 查找并更新子任务状态
+        goals_data = goal_record.goals or []
+        updated = False
+        
+        for i, goal_data in enumerate(goals_data):
+            if goal_data.get('goal_id') == goal_id:
+                for j, sub_task_data in enumerate(goal_data.get('sub_tasks', [])):
+                    if sub_task_data.get('sub_task_id') == sub_task_id:
+                        old_status = sub_task_data.get('sub_task_status', False)
+                        goals_data[i]['sub_tasks'][j]['sub_task_status'] = new_status
+                        
+                        # 根据状态变化更新目标的完成金额
+                        if old_status != new_status:
+                            update_goal_completed_amount(goals_data[i])
+                        
+                        updated = True
+                        break
+                
+                if updated:
+                    break
+        
+        if not updated:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="指定的子任务不存在"
+            )
+        
+        # 更新数据库
+        goal_record.goals = goals_data
+        flag_modified(goal_record, 'goals')
+        db.commit()
+        db.refresh(goal_record)
+        
+        return ApiResponse(
+            code=200,
+            message="更新子任务状态成功"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"更新子任务状态失败: {e}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"更新子任务状态失败: {str(e)}"
         ) 
