@@ -4,8 +4,8 @@ import '../services/goal_service.dart';
 import '../models/goal.dart';
 import 'goal_detail_page.dart';
 import '../widgets/goal_card.dart';
-import '../widgets/coming_soon_page.dart';
 import 'schedule_page.dart';
+import 'planning_analysis_page.dart';
 
 class PlanningPage extends StatefulWidget {
   const PlanningPage({Key? key}) : super(key: key);
@@ -81,7 +81,7 @@ class _PlanningPageState extends State<PlanningPage> with TickerProviderStateMix
         children: [
           _buildGoalsTab(),
           const SchedulePage(),
-          const ComingSoonPage(title: '财务规划'),
+          const PlanningAnalysisPage(),
         ],
       ),
     );
@@ -464,6 +464,10 @@ class _PlanningPageState extends State<PlanningPage> with TickerProviderStateMix
       expectedCompletionTime: completionTime.isEmpty ? null : completionTime,
       targetAmount: targetAmount,
       completedAmount: originalGoal?.completedAmount ?? 0.0,
+      subGoals: originalGoal?.subGoals ?? [],
+      subTasks: originalGoal?.subTasks ?? [],
+      subTaskNum: originalGoal?.subTaskNum ?? 0,
+      subTaskCompletedNum: originalGoal?.subTaskCompletedNum ?? 0,
     );
 
     if (isEditing) {

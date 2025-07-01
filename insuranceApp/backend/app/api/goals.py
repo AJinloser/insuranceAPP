@@ -85,6 +85,9 @@ def get_goal_basic_info(
         # 处理目标数据
         goals_data = []
         for goal_data in goal_record.goals:
+            # 动态计算并更新已完成金额（根据子任务完成状态）
+            update_goal_completed_amount(goal_data)
+            
             # 计算任务统计
             total_tasks, completed_tasks = calculate_task_stats(goal_data)
             
@@ -93,7 +96,7 @@ def get_goal_basic_info(
             for sub_goal_data in goal_data.get('sub_goals', []):
                 sub_goals.append(SubGoal(**sub_goal_data))
             
-            # 创建目标基本信息
+            # 创建目标基本信息（使用动态计算的已完成金额）
             goal_basic_info = GoalBasicInfo(
                 goal_id=goal_data.get('goal_id', ''),
                 goal_name=goal_data.get('goal_name', ''),
@@ -101,12 +104,18 @@ def get_goal_basic_info(
                 priority=goal_data.get('priority'),
                 expected_completion_time=goal_data.get('expected_completion_time'),
                 target_amount=goal_data.get('target_amount'),
-                completed_amount=goal_data.get('completed_amount', 0.0),
+                completed_amount=goal_data.get('completed_amount', 0.0),  # 这里现在是动态计算的值
                 sub_goals=sub_goals,
                 sub_task_num=total_tasks,
                 sub_task_completed_num=completed_tasks
             )
             goals_data.append(goal_basic_info)
+        
+        # 更新数据库中的已完成金额（保存动态计算的结果）
+        goal_record.goals = [goal_data for goal_data in goal_record.goals]
+        flag_modified(goal_record, 'goals')
+        db.commit()
+        db.refresh(goal_record)
         
         return GetGoalBasicInfoResponse(
             code=200,
@@ -151,18 +160,37 @@ def update_goal_basic_info(
             goal_record = Goal(user_id=user_id, goals=[])
             db.add(goal_record)
         
-        # 转换目标数据
+        # 创建现有目标的映射，以便保留子目标和子任务
+        existing_goals_map = {}
+        if goal_record.goals:
+            for existing_goal in goal_record.goals:
+                existing_goals_map[existing_goal.get('goal_id')] = existing_goal
+        
+        # 转换目标数据，保留现有的子目标和子任务
         goals_data = []
         for goal in request.goals:
             goal_dict = goal.dict()
+            goal_id = goal_dict.get('goal_id')
+            
             # 为新目标生成ID
-            if not goal_dict.get('goal_id'):
-                goal_dict['goal_id'] = str(uuid.uuid4())
-            # 初始化子目标和子任务为空列表（如果不存在）
-            if 'sub_goals' not in goal_dict:
+            if not goal_id:
+                goal_id = str(uuid.uuid4())
+                goal_dict['goal_id'] = goal_id
+            
+            # 如果是现有目标，保留其子目标和子任务
+            if goal_id in existing_goals_map:
+                existing_goal = existing_goals_map[goal_id]
+                goal_dict['sub_goals'] = existing_goal.get('sub_goals', [])
+                goal_dict['sub_tasks'] = existing_goal.get('sub_tasks', [])
+                # 重新计算已完成金额（根据子任务状态）
+                update_goal_completed_amount(goal_dict)
+            else:
+                # 新目标初始化子目标和子任务为空列表
                 goal_dict['sub_goals'] = []
-            if 'sub_tasks' not in goal_dict:
                 goal_dict['sub_tasks'] = []
+                # 新目标的已完成金额为0（因为没有子任务）
+                goal_dict['completed_amount'] = 0.0
+            
             goals_data.append(goal_dict)
         
         # 更新目标信息
@@ -172,6 +200,8 @@ def update_goal_basic_info(
         flag_modified(goal_record, 'goals')
         db.commit()
         db.refresh(goal_record)
+        
+        print(f"更新目标基本信息成功，保留了现有的子目标和子任务数据")
         
         return ApiResponse(
             code=200,
@@ -231,6 +261,9 @@ def get_goal_detail_info(
                 detail="指定的目标不存在"
             )
         
+        # 动态计算并更新已完成金额（根据子任务完成状态）
+        update_goal_completed_amount(goal_data)
+        
         # 构造子目标列表
         sub_goals = []
         for sub_goal_data in goal_data.get('sub_goals', []):
@@ -241,7 +274,7 @@ def get_goal_detail_info(
         for sub_task_data in goal_data.get('sub_tasks', []):
             sub_tasks.append(SubTask(**sub_task_data))
         
-        # 创建目标详细信息
+        # 创建目标详细信息（使用动态计算的已完成金额）
         goal_detail = GoalDetailInfo(
             goal_id=goal_data.get('goal_id', ''),
             goal_name=goal_data.get('goal_name', ''),
@@ -249,10 +282,15 @@ def get_goal_detail_info(
             priority=goal_data.get('priority'),
             expected_completion_time=goal_data.get('expected_completion_time'),
             target_amount=goal_data.get('target_amount'),
-            completed_amount=goal_data.get('completed_amount', 0.0),
+            completed_amount=goal_data.get('completed_amount', 0.0),  # 使用动态计算的值
             sub_goals=sub_goals,
             sub_tasks=sub_tasks
         )
+        
+        # 更新数据库中的已完成金额
+        flag_modified(goal_record, 'goals')
+        db.commit()
+        db.refresh(goal_record)
         
         return GetGoalDetailInfoResponse(
             code=200,
@@ -474,6 +512,9 @@ def get_goals_by_date(
         # 处理目标数据，筛选指定日期的目标、子目标和子任务
         schedule_goals = []
         for goal_data in goal_record.goals:
+            # 动态计算并更新已完成金额（根据子任务完成状态）
+            update_goal_completed_amount(goal_data)
+            
             # 检查目标是否在指定日期
             goal_matches = goal_data.get('expected_completion_time') == date
             
@@ -495,7 +536,7 @@ def get_goals_by_date(
                     goal_id=goal_data.get('goal_id', ''),
                     goal_name=goal_data.get('goal_name', ''),
                     target_amount=goal_data.get('target_amount'),
-                    completed_amount=goal_data.get('completed_amount', 0.0),
+                    completed_amount=goal_data.get('completed_amount', 0.0),  # 使用动态计算的值
                     sub_goals=matching_sub_goals,
                     sub_tasks=matching_sub_tasks
                 )
