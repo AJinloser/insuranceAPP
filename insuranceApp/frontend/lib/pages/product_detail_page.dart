@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/insurance_product.dart';
 import '../services/insurance_service.dart';
 import '../services/insurance_list_service.dart';
+import '../services/insurance_chat_service.dart';
 import '../services/auth_service.dart';
 import 'user_insurance_list_page.dart';
 
@@ -83,6 +84,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     
                     // 添加保单按钮
                     _buildAddToListButton(),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // 与保险产品对话按钮
+                    _buildChatWithProductButton(),
                     
                     const SizedBox(height: 16),
                   ],
@@ -618,6 +624,118 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('添加失败: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Widget _buildChatWithProductButton() {
+    return Container(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton(
+        onPressed: _startChat,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Theme.of(context).primaryColor,
+          foregroundColor: Colors.white,
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.chat,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              '与保险产品对话',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 启动与保险产品的对话
+  Future<void> _startChat() async {
+    debugPrint('===> ProductDetailPage: _startChat开始');
+    
+    if (widget.product.productId == null) {
+      debugPrint('===> ProductDetailPage: 产品ID为空');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('产品信息错误'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    debugPrint('===> ProductDetailPage: 产品ID验证通过，显示加载指示器');
+    // 显示加载指示器
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      debugPrint('===> ProductDetailPage: 准备调用InsuranceChatService.startInsuranceChat');
+      final routeArgs = await InsuranceChatService.startInsuranceChat(
+        context,
+        productId: widget.product.productId!.toString(),
+        productType: widget.productType,
+        productName: widget.product.productName,
+      );
+
+      debugPrint('===> ProductDetailPage: InsuranceChatService.startInsuranceChat返回结果: ${routeArgs != null}');
+
+      // 关闭加载指示器
+      debugPrint('===> ProductDetailPage: 关闭加载指示器');
+      Navigator.of(context).pop();
+
+      if (routeArgs == null) {
+        debugPrint('===> ProductDetailPage: 启动对话失败，显示错误提示');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('启动对话失败，请稍后重试'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else {
+        debugPrint('===> ProductDetailPage: 启动对话成功，准备跳转到对话页面');
+        debugPrint('===> ProductDetailPage: 路由参数: $routeArgs');
+        
+        // 延迟一点确保Dialog完全关闭
+        await Future.delayed(const Duration(milliseconds: 100));
+        
+        debugPrint('===> ProductDetailPage: 开始执行路由跳转');
+        Navigator.pushNamed(
+          context,
+          '/conversation',
+          arguments: routeArgs,
+        );
+        debugPrint('===> ProductDetailPage: 路由跳转命令已发出');
+      }
+    } catch (e) {
+      debugPrint('===> ProductDetailPage: 发生异常: $e');
+      // 关闭加载指示器
+      Navigator.of(context).pop();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('启动对话失败: $e'),
           backgroundColor: Colors.red,
         ),
       );

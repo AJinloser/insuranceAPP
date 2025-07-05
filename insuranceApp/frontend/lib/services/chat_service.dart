@@ -379,6 +379,11 @@ class ChatService with ChangeNotifier {
   
   /// 发送消息（使用流式响应）
   Future<void> sendMessageStream(String message) async {
+    return sendMessageStreamWithInputs(message, inputs: {});
+  }
+  
+  /// 发送消息（使用流式响应，支持自定义inputs）
+  Future<void> sendMessageStreamWithInputs(String message, {Map<String, dynamic>? inputs}) async {
     if (_userId.isEmpty) {
       await _initUserId();
     }
@@ -422,7 +427,7 @@ class ChatService with ChangeNotifier {
 
       // 创建聊天请求 - 对于新对话，不传conversationId
       final requestBody = {
-        'inputs': {},
+        'inputs': inputs ?? {},
         'query': message,
         'response_mode': 'streaming',
         'user': _userId,

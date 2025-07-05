@@ -121,15 +121,25 @@ class MyApp extends StatelessWidget {
       onGenerateRoute: (settings) {
         // 处理对话页面路由
         if (settings.name == '/conversation') {
+          debugPrint('===> Router: 收到对话页面路由请求');
           final args = settings.arguments as Map<String, dynamic>?;
           final conversationId = args?['conversationId'] as String?;
           final initialQuestion = args?['initialQuestion'] as String?;
+          final productInfo = args?['productInfo'] as String?;
+          
+          debugPrint('===> Router: 路由参数 - conversationId: $conversationId');
+          debugPrint('===> Router: 路由参数 - initialQuestion: $initialQuestion');
+          debugPrint('===> Router: 路由参数 - productInfo长度: ${productInfo?.length ?? 0}');
           
           return MaterialPageRoute(
-            builder: (context) => ConversationPage(
-              conversationId: conversationId,
-              initialQuestion: initialQuestion,
-            ),
+            builder: (context) {
+              debugPrint('===> Router: 正在构建ConversationPage');
+              return ConversationPage(
+                conversationId: conversationId,
+                initialQuestion: initialQuestion,
+                productInfo: productInfo,
+              );
+            },
           );
         }
         

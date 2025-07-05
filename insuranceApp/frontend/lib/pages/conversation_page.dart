@@ -12,11 +12,13 @@ import '../widgets/chat_message_item.dart';
 class ConversationPage extends StatefulWidget {
   final String? conversationId;
   final String? initialQuestion;
+  final String? productInfo;
 
   const ConversationPage({
     Key? key,
     this.conversationId,
     this.initialQuestion,
+    this.productInfo,
   }) : super(key: key);
 
   @override
@@ -27,11 +29,26 @@ class _ConversationPageState extends State<ConversationPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isLoading = true;
+  bool _hasProductInfo = false;
   
   @override
   void initState() {
     super.initState();
+    debugPrint('===> ConversationPage: initState开始');
+    debugPrint('===> ConversationPage: conversationId=${widget.conversationId}');
+    debugPrint('===> ConversationPage: initialQuestion=${widget.initialQuestion}');
+    debugPrint('===> ConversationPage: productInfo长度=${widget.productInfo?.length ?? 0}');
+    
+    _hasProductInfo = widget.productInfo != null && widget.productInfo!.isNotEmpty;
+    
+    // 如果有产品信息，打印调试信息
+    if (_hasProductInfo) {
+      debugPrint('===> ConversationPage: 收到产品信息，长度: ${widget.productInfo!.length}');
+    }
+    
+    debugPrint('===> ConversationPage: 准备执行_loadConversation');
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint('===> ConversationPage: PostFrameCallback触发，开始加载会话');
       _loadConversation();
     });
   }
@@ -131,7 +148,19 @@ class _ConversationPageState extends State<ConversationPage> {
     _messageController.clear();
     
     final chatService = Provider.of<ChatService>(context, listen: false);
-    await chatService.sendMessageStream(message);
+    
+    // 如果有产品信息且是首次发送消息，则包含产品信息
+    if (_hasProductInfo && message == widget.initialQuestion) {
+      debugPrint('===> ConversationPage: 发送包含产品信息的消息');
+      await chatService.sendMessageStreamWithInputs(
+        message,
+        inputs: {'text': widget.productInfo!},
+      );
+      // 标记产品信息已使用，后续消息不再包含
+      _hasProductInfo = false;
+    } else {
+      await chatService.sendMessageStream(message);
+    }
     
     // 滚动到底部
     WidgetsBinding.instance.addPostFrameCallback((_) {
