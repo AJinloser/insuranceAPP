@@ -13,12 +13,14 @@ class ConversationPage extends StatefulWidget {
   final String? conversationId;
   final String? initialQuestion;
   final String? productInfo;
+  final VoidCallback? onInitialQuestionSent;
 
   const ConversationPage({
     Key? key,
     this.conversationId,
     this.initialQuestion,
     this.productInfo,
+    this.onInitialQuestionSent,
   }) : super(key: key);
 
   @override
@@ -30,6 +32,7 @@ class _ConversationPageState extends State<ConversationPage> {
   final ScrollController _scrollController = ScrollController();
   bool _isLoading = true;
   bool _hasProductInfo = false;
+  bool _hasInitialQuestionSent = false; // 跟踪是否已经发送过初始问题
   
   @override
   void initState() {
@@ -90,7 +93,7 @@ class _ConversationPageState extends State<ConversationPage> {
       }
       
       // 如果有初始问题，在页面加载完成后自动发送
-      if (widget.initialQuestion != null && widget.initialQuestion!.isNotEmpty) {
+      if (widget.initialQuestion != null && widget.initialQuestion!.isNotEmpty && !_hasInitialQuestionSent) {
         // 使用微延迟确保UI已经完成渲染
         Future.delayed(const Duration(milliseconds: 300), () {
           if (mounted) {
@@ -145,12 +148,22 @@ class _ConversationPageState extends State<ConversationPage> {
     final message = _messageController.text.trim();
     if (message.isEmpty) return;
     
+    // 检查是否是初始问题，如果是则标记为已发送
+    final isInitialQuestion = message == widget.initialQuestion;
+    if (isInitialQuestion) {
+      _hasInitialQuestionSent = true;
+      // 通知HomePage清除初始数据
+      if (widget.onInitialQuestionSent != null) {
+        widget.onInitialQuestionSent!();
+      }
+    }
+
     _messageController.clear();
     
     final chatService = Provider.of<ChatService>(context, listen: false);
     
     // 如果有产品信息且是首次发送消息，则包含产品信息
-    if (_hasProductInfo && message == widget.initialQuestion) {
+    if (_hasProductInfo && isInitialQuestion) {
       debugPrint('===> ConversationPage: 发送包含产品信息的消息');
       await chatService.sendMessageStreamWithInputs(
         message,

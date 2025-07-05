@@ -717,16 +717,20 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         debugPrint('===> ProductDetailPage: 启动对话成功，准备跳转到对话页面');
         debugPrint('===> ProductDetailPage: 路由参数: $routeArgs');
         
-        // 延迟一点确保Dialog完全关闭
+        // 延迟确保Dialog完全关闭
         await Future.delayed(const Duration(milliseconds: 100));
         
-        debugPrint('===> ProductDetailPage: 开始执行路由跳转');
+        // 跳转到首页的对话标签页，而不是独立的对话页面
         Navigator.pushNamed(
           context,
-          '/conversation',
-          arguments: routeArgs,
+          '/home',
+          arguments: {
+            'conversationId': routeArgs['conversationId'],
+            'initialTabIndex': 0, // 对话页面的索引
+            'initialQuestion': routeArgs['initialQuestion'],
+            'productInfo': routeArgs['productInfo'],
+          },
         );
-        debugPrint('===> ProductDetailPage: 路由跳转命令已发出');
       }
     } catch (e) {
       debugPrint('===> ProductDetailPage: 发生异常: $e');

@@ -148,11 +148,15 @@ class MyApp extends StatelessWidget {
           final args = settings.arguments as Map<String, dynamic>?;
           final conversationId = args?['conversationId'] as String?;
           final initialTabIndex = args?['initialTabIndex'] as int?;
+          final initialQuestion = args?['initialQuestion'] as String?;
+          final productInfo = args?['productInfo'] as String?;
           
           return MaterialPageRoute(
             builder: (context) => HomePage(
               conversationId: conversationId,
               initialTabIndex: initialTabIndex,
+              initialQuestion: initialQuestion,
+              productInfo: productInfo,
             ),
           );
         }

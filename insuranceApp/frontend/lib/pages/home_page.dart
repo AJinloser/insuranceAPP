@@ -9,8 +9,16 @@ import 'planning_page.dart';
 class HomePage extends StatefulWidget {
   final String? conversationId;
   final int? initialTabIndex;
+  final String? initialQuestion;
+  final String? productInfo;
   
-  const HomePage({Key? key, this.conversationId, this.initialTabIndex}) : super(key: key);
+  const HomePage({
+    Key? key, 
+    this.conversationId, 
+    this.initialTabIndex,
+    this.initialQuestion,
+    this.productInfo,
+  }) : super(key: key);
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -20,7 +28,12 @@ class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
   
   // 页面列表
-  late final List<Widget> _pages;
+  List<Widget> _pages = []; // 改为可变列表
+  
+  // 动态参数，用于支持清除
+  String? _currentConversationId;
+  String? _currentInitialQuestion;
+  String? _currentProductInfo;
   
   // 标题列表
   final List<String> _titles = const [
@@ -45,13 +58,37 @@ class _HomePageState extends State<HomePage> {
     // 设置初始标签页索引
     _selectedIndex = widget.initialTabIndex ?? 0;
     
-    // 初始化页面列表，并传递conversationId给ConversationPage
+    // 初始化动态参数
+    _currentConversationId = widget.conversationId;
+    _currentInitialQuestion = widget.initialQuestion;
+    _currentProductInfo = widget.productInfo;
+    
+    // 初始化页面列表
+    _updatePages();
+  }
+
+  /// 更新页面列表
+  void _updatePages() {
     _pages = [
-      ConversationPage(conversationId: widget.conversationId), // 智能助手页面（对话页面）
+      ConversationPage(
+        conversationId: _currentConversationId,
+        initialQuestion: _currentInitialQuestion,
+        productInfo: _currentProductInfo,
+        onInitialQuestionSent: _clearInitialData, // 添加回调
+      ), // 智能助手页面（对话页面）
       const InsurancePage(), // 保险页面
       const PlanningPage(), // 财务规划页面
       const ProfilePage(), // 个人中心页面
     ];
+  }
+
+  /// 清除初始数据，防止重复发送
+  void _clearInitialData() {
+    setState(() {
+      _currentInitialQuestion = null;
+      _currentProductInfo = null;
+      _updatePages();
+    });
   }
 
   // 切换导航项

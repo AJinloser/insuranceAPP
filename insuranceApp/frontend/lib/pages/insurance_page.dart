@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/insurance_product.dart';
 import '../services/insurance_service.dart';
+import '../services/comparison_chat_service.dart';
 import '../widgets/insurance_product_card.dart';
 import 'product_detail_page.dart';
 import 'user_insurance_list_page.dart';
@@ -22,6 +23,10 @@ class _InsurancePageState extends State<InsurancePage> with TickerProviderStateM
   int _totalPages = 0;
   bool _showFilterDialog = false;
   Map<String, dynamic> _currentFilters = {};
+
+  // 产品对比相关状态
+  final List<ComparisonProduct> _comparisonProducts = [];
+  static const int _maxComparisonProducts = 2;
 
   @override
   void initState() {
@@ -131,6 +136,145 @@ class _InsurancePageState extends State<InsurancePage> with TickerProviderStateM
         ),
       ),
     );
+  }
+
+  /// 添加产品到对比列表
+  void _addToComparison(InsuranceProduct product) {
+    debugPrint('===> InsurancePage: 添加产品到对比列表 - ${product.productName}');
+    
+    if (product.productId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('产品信息错误'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final comparisonProduct = ComparisonProduct.fromInsuranceProduct(
+      product, 
+      _insuranceService.currentProductType
+    );
+
+    // 检查是否已经添加过
+    if (_comparisonProducts.any((p) => p.productId == comparisonProduct.productId)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('该产品已在对比列表中'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // 检查是否达到最大数量
+    if (_comparisonProducts.length >= _maxComparisonProducts) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('最多只能选择$_maxComparisonProducts个产品进行对比'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _comparisonProducts.add(comparisonProduct);
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('已添加「${product.productName}」到对比列表'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  /// 从对比列表中移除产品
+  void _removeFromComparison(int index) {
+    debugPrint('===> InsurancePage: 从对比列表移除产品 - index: $index');
+    
+    if (index >= 0 && index < _comparisonProducts.length) {
+      setState(() {
+        _comparisonProducts.removeAt(index);
+      });
+    }
+  }
+
+  /// 启动产品对比
+  Future<void> _startComparison() async {
+    debugPrint('===> InsurancePage: 启动产品对比');
+    
+    if (_comparisonProducts.length < 2) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('请选择2个产品进行对比'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // 显示加载指示器
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    try {
+      final routeArgs = await ComparisonChatService.startComparisonChat(
+        context,
+        products: _comparisonProducts,
+      );
+
+      // 关闭加载指示器
+      Navigator.of(context).pop();
+
+      if (routeArgs == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('启动对比失败，请稍后重试'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else {
+        // 成功启动对比，清空对比列表
+        setState(() {
+          _comparisonProducts.clear();
+        });
+
+        // 延迟确保Dialog完全关闭
+        await Future.delayed(const Duration(milliseconds: 100));
+        
+        // 跳转到首页的对话标签页，而不是独立的对话页面
+        Navigator.pushNamed(
+          context,
+          '/home',
+          arguments: {
+            'conversationId': routeArgs['conversationId'],
+            'initialTabIndex': 0, // 对话页面的索引
+            'initialQuestion': routeArgs['initialQuestion'],
+            'productInfo': routeArgs['productInfo'],
+          },
+        );
+      }
+    } catch (e) {
+      debugPrint('===> InsurancePage: 启动对比异常: $e');
+      
+      // 关闭加载指示器
+      Navigator.of(context).pop();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('启动对比失败: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -275,40 +419,24 @@ class _InsurancePageState extends State<InsurancePage> with TickerProviderStateM
               ),
               const SizedBox(width: 12),
               // 筛选按钮
-              IconButton(
-                onPressed: () => _showFilterBottomSheet(),
-                icon: Stack(
-                  children: [
-                    const Icon(Icons.filter_list),
-                    if (_currentFilters.isNotEmpty)
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.grey[100],
-                  foregroundColor: Colors.grey[700],
+              ElevatedButton(
+                onPressed: _showFilterBottomSheet,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
+                child: const Icon(Icons.filter_alt),
               ),
             ],
           ),
           
           const SizedBox(height: 12),
           
-          // 操作按钮行
+          // 搜索和重置按钮
           Row(
             children: [
               Expanded(
@@ -330,8 +458,8 @@ class _InsurancePageState extends State<InsurancePage> with TickerProviderStateM
                 child: OutlinedButton(
                   onPressed: _resetSearch,
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.grey[700],
-                    side: BorderSide(color: Colors.grey[300]!),
+                    side: BorderSide(color: Theme.of(context).primaryColor),
+                    foregroundColor: Theme.of(context).primaryColor,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -340,53 +468,9 @@ class _InsurancePageState extends State<InsurancePage> with TickerProviderStateM
                   child: const Text('重置'),
                 ),
               ),
-              const SizedBox(width: 12),
-              // 排序按钮
-              _buildSortButton(),
             ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSortButton() {
-    return PopupMenuButton<String>(
-      onSelected: _changeSortBy,
-      itemBuilder: (context) {
-        return [
-          const PopupMenuItem(
-            value: 'total_score',
-            child: Text('评分排序'),
-          ),
-          const PopupMenuItem(
-            value: 'premium',
-            child: Text('保费排序'),
-          ),
-          const PopupMenuItem(
-            value: 'company_name',
-            child: Text('公司排序'),
-          ),
-        ];
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[300]!),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.sort, size: 18, color: Colors.grey[700]),
-            const SizedBox(width: 4),
-            Text(
-              '排序',
-              style: TextStyle(color: Colors.grey[700], fontSize: 14),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -443,6 +527,7 @@ class _InsurancePageState extends State<InsurancePage> with TickerProviderStateM
             return InsuranceProductCard(
               product: product,
               onViewDetails: () => _showProductDetail(product),
+              onAddToComparison: () => _addToComparison(product),
             );
           },
         ),
@@ -450,17 +535,226 @@ class _InsurancePageState extends State<InsurancePage> with TickerProviderStateM
         // 分页器
         if (_totalPages > 1) _buildPagination(),
         
+        // 产品对比卡片
+        _buildProductComparisonCard(),
+        
         // "我的保单"卡片
         _buildMyInsuranceCard(),
       ],
     );
   }
 
+  /// 构建产品对比卡片
+  Widget _buildProductComparisonCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 标题
+            Row(
+              children: [
+                Icon(
+                  Icons.compare_arrows,
+                  color: Colors.indigo[600],
+                  size: 24,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '产品对比',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.indigo[700],
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // 对比框
+            Row(
+              children: [
+                // 第一个产品框
+                Expanded(
+                  child: _buildComparisonBox(0),
+                ),
+                
+                const SizedBox(width: 16),
+                
+                // VS图标
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.indigo[100],
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'VS',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.indigo[700],
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(width: 16),
+                
+                // 第二个产品框
+                Expanded(
+                  child: _buildComparisonBox(1),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // 对比按钮
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _comparisonProducts.length == 2 ? _startComparison : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _comparisonProducts.length == 2 
+                      ? Colors.indigo[600] 
+                      : Colors.grey[400],
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: Text(
+                  _comparisonProducts.length == 2 
+                      ? '开始对比' 
+                      : '请选择2个产品 (${_comparisonProducts.length}/2)',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 构建单个对比框
+  Widget _buildComparisonBox(int index) {
+    final hasProduct = index < _comparisonProducts.length;
+    
+    return Container(
+      height: 100,
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: hasProduct ? Colors.indigo[300]! : Colors.grey[300]!,
+          width: hasProduct ? 2 : 1,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        color: hasProduct ? Colors.indigo[50] : Colors.grey[50],
+      ),
+      child: hasProduct
+          ? _buildProductInfo(index)
+          : _buildEmptyBox(),
+    );
+  }
+
+  /// 构建产品信息
+  Widget _buildProductInfo(int index) {
+    final product = _comparisonProducts[index];
+    
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                product.productName,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                product.productType,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // 删除按钮
+        Positioned(
+          top: 4,
+          right: 4,
+          child: GestureDetector(
+            onTap: () => _removeFromComparison(index),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.red[100],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                Icons.close,
+                size: 16,
+                color: Colors.red[600],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 构建空的对比框
+  Widget _buildEmptyBox() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.add_circle_outline,
+            size: 32,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '长按产品卡片\n选择"进行对比"',
+            style: TextStyle(
+              color: Colors.grey[500],
+              fontSize: 12,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
   /// 构建"我的保单"卡片
   Widget _buildMyInsuranceCard() {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 16),
-      child: GestureDetector(
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
         onTap: () {
           Navigator.push(
             context,
@@ -469,75 +763,59 @@ class _InsurancePageState extends State<InsurancePage> with TickerProviderStateM
             ),
           );
         },
-        child: Card(
-          elevation: 3,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.purple.shade100,
-                  Colors.purple.shade50,
-                ],
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              // 图标
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.purple.shade200.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(50),
+                ),
+                child: Icon(
+                  Icons.assignment,
+                  color: Colors.purple.shade700,
+                  size: 24,
+                ),
               ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                // 图标
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.purple.shade200.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(50),
-                  ),
-                  child: Icon(
-                    Icons.assignment,
-                    color: Colors.purple.shade700,
-                    size: 24,
-                  ),
-                ),
-                
-                const SizedBox(width: 16),
-                
-                // 文字内容
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '我的保单',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.purple.shade800,
-                        ),
+              
+              const SizedBox(width: 16),
+              
+              // 文字内容
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '我的保单',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple.shade800,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '查看和管理您已添加的保险产品',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.purple.shade600,
-                        ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '查看和管理您已添加的保险产品',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.purple.shade600,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                
-                // 箭头
-                Icon(
-                  Icons.arrow_forward_ios,
-                  color: Colors.purple.shade600,
-                  size: 16,
-                ),
-              ],
-            ),
+              ),
+              
+              // 箭头
+              Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.purple.shade600,
+                size: 16,
+              ),
+            ],
           ),
         ),
       ),

@@ -5,11 +5,13 @@ import '../models/insurance_product.dart';
 class InsuranceProductCard extends StatelessWidget {
   final InsuranceProduct product;
   final VoidCallback? onViewDetails;
+  final VoidCallback? onAddToComparison;
   
   const InsuranceProductCard({
     Key? key,
     required this.product,
     this.onViewDetails,
+    this.onAddToComparison,
   }) : super(key: key);
 
   @override
@@ -22,11 +24,21 @@ class InsuranceProductCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
-      child: InkWell(
-        onTap: onViewDetails,
-        borderRadius: BorderRadius.circular(12),
+      child: GestureDetector(
+        onTap: () {
+          debugPrint('===> 产品卡片被点击: ${product.productName}');
+          if (onViewDetails != null) {
+            onViewDetails!();
+          }
+        },
+        onLongPress: () {
+          debugPrint('===> 产品卡片被长按: ${product.productName}');
+          _showMobileMenu(context);
+        },
+        behavior: HitTestBehavior.translucent,
         child: Container(
           padding: const EdgeInsets.all(16),
+          width: double.infinity,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -158,22 +170,30 @@ class InsuranceProductCard extends StatelessWidget {
                       ),
                     ),
                   
-                  // 查看详情按钮
+                  // 查看详情按钮 - 使用GestureDetector防止冲突
                   Flexible(
-                    child: ElevatedButton(
-                      onPressed: onViewDetails,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: theme.primaryColor,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
+                    child: GestureDetector(
+                      onTap: () {
+                        // 防止事件冲突，直接调用
+                        debugPrint('===> 详情按钮被点击');
+                        if (onViewDetails != null) {
+                          onViewDetails!();
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: theme.primaryColor,
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        minimumSize: const Size(60, 32),
-                      ),
-                      child: const Text(
-                        '详情',
-                        style: TextStyle(fontSize: 12),
+                        child: const Text(
+                          '详情',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ),
                   ),
@@ -181,6 +201,141 @@ class InsuranceProductCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+  
+  /// 显示移动端友好的长按菜单
+  void _showMobileMenu(BuildContext context) {
+    // 给用户一个触觉反馈，表示长按被识别
+    // HapticFeedback.lightImpact(); // 可以添加触觉反馈
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 顶部指示条
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            
+            const SizedBox(height: 20),
+            
+            // 产品名称
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
+                product.productName ?? '未知产品',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            
+            const SizedBox(height: 20),
+            
+            // 菜单选项
+            ListTile(
+              leading: Icon(
+                Icons.compare_arrows,
+                color: Colors.blue[600],
+                size: 24,
+              ),
+              title: const Text(
+                '进行对比',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              subtitle: const Text(
+                '添加到产品对比列表',
+                style: TextStyle(fontSize: 14),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                if (onAddToComparison != null) {
+                  onAddToComparison!();
+                }
+              },
+            ),
+            
+            const Divider(height: 1),
+            
+            ListTile(
+              leading: Icon(
+                Icons.visibility,
+                color: Colors.green[600],
+                size: 24,
+              ),
+              title: const Text(
+                '查看详情',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              subtitle: const Text(
+                '查看完整产品信息',
+                style: TextStyle(fontSize: 14),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                if (onViewDetails != null) {
+                  onViewDetails!();
+                }
+              },
+            ),
+            
+            const SizedBox(height: 10),
+            
+            // 取消按钮
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.grey[100],
+                    foregroundColor: Colors.grey[700],
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text(
+                    '取消',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            
+            // 底部安全区域
+            SizedBox(height: MediaQuery.of(context).padding.bottom),
+          ],
         ),
       ),
     );
@@ -349,11 +504,13 @@ class InsuranceProductCard extends StatelessWidget {
 class InsuranceProductCardList extends StatelessWidget {
   final List<InsuranceProduct> products;
   final Function(InsuranceProduct)? onProductSelected;
+  final Function(InsuranceProduct)? onProductAddToComparison;
   
   const InsuranceProductCardList({
     Key? key,
     required this.products,
     this.onProductSelected,
+    this.onProductAddToComparison,
   }) : super(key: key);
 
   @override
@@ -376,6 +533,11 @@ class InsuranceProductCardList extends StatelessWidget {
           onViewDetails: () {
             if (onProductSelected != null) {
               onProductSelected!(product);
+            }
+          },
+          onAddToComparison: () {
+            if (onProductAddToComparison != null) {
+              onProductAddToComparison!(product);
             }
           },
         );
