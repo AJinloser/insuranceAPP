@@ -131,6 +131,15 @@ insuranceApp/
         - 修改模式中，页面底部包含一个删除按钮
         - 勾选后，可以点击点击删除按钮，删除勾选的保险产品
         - 通过POST /insurance_list/update更新用户保单信息表中的对应字段
+    - **新添加的chat相关部分**：
+        - 在用户保单底部添加一个‘保单分析’按钮。
+        - 点击‘保单分析’按钮后，首先根据.env中的CHAT_WITH_INSURANCE_LIST_KEY给出的api key,在chat页面中的ai模块列表中找到对应的ai模块，跳转到对应的对话页面进行对话（如果没有找到，则提示用户没有找到对应的ai模块）
+        - 复用已经实现的对话页面，不需要重新创建
+        - 跳转页面并通过Dify API:POST/chat-messages发送第一条对话信息，具体要求
+            - 在对话信息中，query字段为"你好，我想分析保单"
+            - 在对话信息中，通过GET /insurance_products/product_info获取用户保单中所有保险产品的具体的保险产品信息（还需添加product_type字段），并把这个信息作为inputs字段中的text字段，即inputs字段为{"text": "具体的保险产品信息"}
+        - 后续的对话过程与原先对话一致。
+
     
 
 - **具体保险产品信息页面**
