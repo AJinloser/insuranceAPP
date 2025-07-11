@@ -6,6 +6,7 @@ import '../services/user_info_service.dart';
 import '../services/auth_service.dart';
 import 'profile_edit_page.dart';
 import 'privacy_policy_page.dart';
+import 'help_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -263,8 +264,11 @@ class _ProfilePageState extends State<ProfilePage> {
             subtitle: const Text('获取帮助或提供反馈'),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('帮助功能敬请期待')),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const HelpPage(),
+                ),
               );
             },
           ),
