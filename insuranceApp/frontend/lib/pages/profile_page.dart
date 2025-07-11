@@ -5,6 +5,7 @@ import '../models/user_info.dart';
 import '../services/user_info_service.dart';
 import '../services/auth_service.dart';
 import 'profile_edit_page.dart';
+import 'privacy_policy_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -264,6 +265,30 @@ class _ProfilePageState extends State<ProfilePage> {
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('帮助功能敬请期待')),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ListTile(
+            leading: Icon(
+              Icons.privacy_tip_outlined,
+              color: Theme.of(context).primaryColor,
+            ),
+            title: const Text('隐私政策'),
+            subtitle: const Text('了解我们如何保护您的隐私'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PrivacyPolicyPage(),
+                ),
               );
             },
           ),

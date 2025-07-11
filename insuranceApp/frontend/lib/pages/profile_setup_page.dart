@@ -56,7 +56,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
 
   // 下一页
   void _nextPage() {
-    if (_currentPage < 2) {
+    if (_currentPage < 3) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -71,6 +71,83 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
+    }
+  }
+
+  // 跳过设置
+  Future<void> _skipSetup() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    print('===> ProfileSetupPage: 用户选择跳过个人信息设置');
+
+    try {
+      // 构建空的UserInfo对象
+      final userInfo = UserInfo(
+        basicInfo: BasicInfo(
+          age: null,
+          city: null,
+          gender: null,
+        ),
+        financialInfo: FinancialInfo(
+          occupation: null,
+          income: null,
+          expenses: null,
+          assets: null,
+          liabilities: null,
+        ),
+        riskInfo: RiskInfo(),
+        retirementInfo: RetirementInfo(),
+        familyInfo: FamilyInfo(familyMembers: []),
+        goalInfo: GoalInfo(goals: []),
+        otherInfo: {},
+      );
+
+      final userInfoService = Provider.of<UserInfoService>(context, listen: false);
+      final success = await userInfoService.updateUserInfo(userInfo);
+
+      if (success && mounted) {
+        print('===> ProfileSetupPage: 跳过设置成功');
+        
+        // 标记新用户设置完成
+        final authService = Provider.of<AuthService>(context, listen: false);
+        authService.completeNewUserSetup();
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('已跳过个人信息设置'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        
+        print('===> ProfileSetupPage: 跳过设置完成，AuthService将处理页面切换');
+        // 不需要手动导航，AuthService状态变化会自动触发页面切换到HomePage
+      } else if (mounted) {
+        print('===> ProfileSetupPage: 跳过设置失败');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(userInfoService.error ?? '跳过设置失败'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      print('===> ProfileSetupPage: 跳过设置异常: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('跳过设置失败: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -209,6 +286,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                         });
                       },
                       children: [
+                        _buildPrivacyPolicyPage(),
                         _buildBasicInfoPage(),
                         _buildFinancialInfoPage(),
                         _buildGoalInfoPage(),
@@ -231,7 +309,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   Widget _buildPageIndicator() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(3, (index) {
+      children: List.generate(4, (index) {
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 4),
           width: 12,
@@ -242,6 +320,118 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
           ),
         );
       }),
+    );
+  }
+
+  // 隐私政策页面
+  Widget _buildPrivacyPolicyPage() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '隐私与安全',
+            style: TextStyle(
+              fontSize: 24.0,
+              fontWeight: FontWeight.bold,
+              color: _primaryColor,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.security, color: _primaryColor, size: 24),
+                    const SizedBox(width: 8),
+                    Text(
+                      '您的信息安全',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: _primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _buildPrivacyPolicySection(
+                  '信息用途',
+                  '• 个性化保险产品推荐\n• 财务规划建议与分析\n• 风险评估与管理\n• 产品匹配与优化',
+                ),
+                const SizedBox(height: 12),
+                _buildPrivacyPolicySection(
+                  '保密承诺',
+                  '• 严格遵守《个人信息保护法》\n• 绝不向第三方出售或泄露您的信息\n• 您可随时查看、修改或删除个人信息',
+                ),
+                const SizedBox(height: 12),
+                _buildPrivacyPolicySection(
+                  '平台担保',
+                  '• 7×24小时安全监控\n• 专业合规团队审核\n• 完善的数据备份机制',
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.verified_user, color: Colors.green.shade600, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '我们承诺：所有信息均为可选填写，您可以选择跳过或稍后填写，这不会影响您使用我们的服务。',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.green.shade700,
+                            height: 1.3,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 隐私政策部分构建器
+  Widget _buildPrivacyPolicySection(String title, String content) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          content,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[600],
+            height: 1.4,
+          ),
+        ),
+      ],
     );
   }
 
@@ -399,6 +589,18 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       padding: const EdgeInsets.only(top: 24),
       child: Row(
         children: [
+          // 隐私政策页面的跳过按钮
+          if (_currentPage == 0)
+            Expanded(
+              child: CustomButton(
+                text: '跳过设置',
+                onPressed: _skipSetup,
+                backgroundColor: Colors.grey[400],
+                isLoading: _isLoading,
+                isFullWidth: true,
+              ),
+            ),
+          
           // 上一页按钮
           if (_currentPage > 0)
             Expanded(
@@ -410,13 +612,13 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
               ),
             ),
           
-          if (_currentPage > 0) const SizedBox(width: 16),
+          if (_currentPage > 0 || _currentPage == 0) const SizedBox(width: 16),
 
           // 下一页/提交按钮
           Expanded(
             child: CustomButton(
-              text: _currentPage == 2 ? '完成设置' : '下一页',
-              onPressed: _currentPage == 2 ? _submitForm : _nextPage,
+              text: _currentPage == 3 ? '完成设置' : '下一页',
+              onPressed: _currentPage == 3 ? _submitForm : _nextPage,
               isLoading: _isLoading,
               backgroundColor: _primaryColor,
               isFullWidth: true,
