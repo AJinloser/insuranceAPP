@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:provider/provider.dart';
 import '../models/dify_models.dart';
 import '../models/insurance_product.dart';
-import 'insurance_product_card.dart';
+import '../models/goal_suggestion.dart';
+import '../services/settings_service.dart';
+import '../services/goal_suggestion_service.dart';
+import '../widgets/insurance_product_card.dart';
+import '../widgets/goal_suggestion_card.dart';
 import 'dart:convert';
 import 'dart:math' show min;
 
@@ -29,115 +34,92 @@ class ChatMessageItem extends StatelessWidget {
     final theme = Theme.of(context);
     final primaryColor = theme.primaryColor;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // AI头像
           if (!isUserMessage)
             Container(
               width: 40,
               height: 40,
               margin: const EdgeInsets.only(right: 12.0),
               decoration: BoxDecoration(
-                color: primaryColor.withAlpha(26),
+                color: primaryColor.withAlpha(25),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Icon(
-                Icons.smart_toy_outlined,
+                Icons.smart_toy,
                 size: 24,
                 color: primaryColor,
               ),
             ),
-          
-          // 消息内容
           Expanded(
             child: Column(
-              crossAxisAlignment: isUserMessage 
-                ? CrossAxisAlignment.end 
-                : CrossAxisAlignment.start,
+              crossAxisAlignment: 
+                  isUserMessage ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 // 消息气泡
                 Container(
                   constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width * 0.8,
+                    maxWidth: MediaQuery.of(context).size.width * 0.7,
                   ),
                   padding: const EdgeInsets.all(16.0),
                   decoration: BoxDecoration(
-                    color: isUserMessage
-                        ? primaryColor
-                        : Colors.grey.withAlpha(26),
-                    borderRadius: BorderRadius.circular(16),
+                    color: isUserMessage ? primaryColor : Colors.grey.withAlpha(25),
+                    borderRadius: BorderRadius.circular(18),
                   ),
-                  child: isUserMessage 
-                    ? SelectableText(
-                        message.query!,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.white,
-                          height: 1.5,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (isUserMessage) ...[
+                        // 用户消息
+                        Text(
+                          message.query!,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.white,
+                            height: 1.4,
+                          ),
                         ),
-                      ) 
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // AI正在回复的动画
-                          if (isResponding && isLastMessage && (message.answer == null || message.answer!.isEmpty))
-                            _buildLoadingAnimation()
-                          else
-                            _buildMessageContent(context, message.answer ?? ''),
-                            
-                          // 显示文件（图片等）
-                          if (message.messageFiles != null && message.messageFiles!.isNotEmpty)
-                            _buildMessageFiles(message.messageFiles!),
-                            
-                          // 引用和归属信息
-                          if (message.retrieverResources != null && message.retrieverResources!.isNotEmpty)
-                            _buildRetrieverResources(message.retrieverResources!),
-                        ],
-                      ),
+                      ] else ...[
+                        // AI消息
+                        if (message.answer != null)
+                          _buildMessageContent(context, message.answer!),
+                        
+                        // 加载动画
+                        if (isResponding && isLastMessage)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: _buildLoadingAnimation(),
+                          ),
+                      ],
+                    ],
+                  ),
                 ),
                 
-                // 反馈按钮（仅AI消息）
-                if (!isUserMessage && onFeedback != null && !message.id.startsWith('temp_'))
+                // 消息操作按钮（仅AI消息）
+                if (!isUserMessage && message.answer != null && message.answer!.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 8.0),
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        // 点赞
-                        IconButton(
-                          icon: Icon(
-                            message.feedback?.rating == 'like'
-                                ? Icons.thumb_up
-                                : Icons.thumb_up_outlined,
-                            size: 18,
-                          ),
-                          onPressed: () => onFeedback!(
-                            message.id,
-                            message.feedback?.rating == 'like' ? null : 'like',
-                          ),
-                          color: message.feedback?.rating == 'like'
-                              ? primaryColor
-                              : null,
+                        _buildActionButton(
+                          icon: Icons.thumb_up_outlined,
+                          onPressed: () => onFeedback?.call(message.id, 'like'),
                         ),
-                        
-                        // 点踩
-                        IconButton(
-                          icon: Icon(
-                            message.feedback?.rating == 'dislike'
-                                ? Icons.thumb_down
-                                : Icons.thumb_down_outlined,
-                            size: 18,
-                          ),
-                          onPressed: () => onFeedback!(
-                            message.id,
-                            message.feedback?.rating == 'dislike' ? null : 'dislike',
-                          ),
-                          color: message.feedback?.rating == 'dislike'
-                              ? Colors.red
-                              : null,
+                        const SizedBox(width: 8),
+                        _buildActionButton(
+                          icon: Icons.thumb_down_outlined,
+                          onPressed: () => onFeedback?.call(message.id, 'dislike'),
+                        ),
+                        const SizedBox(width: 8),
+                        _buildActionButton(
+                          icon: Icons.volume_up_outlined,
+                          onPressed: () {
+                            // TODO: 实现语音播放
+                          },
                         ),
                       ],
                     ),
@@ -145,8 +127,6 @@ class ChatMessageItem extends StatelessWidget {
               ],
             ),
           ),
-          
-          // 用户头像
           if (isUserMessage)
             Container(
               width: 40,
@@ -167,167 +147,320 @@ class ChatMessageItem extends StatelessWidget {
     );
   }
   
-  /// 构建消息内容，支持保险产品卡片渲染
+  /// 构建消息内容，支持保险产品卡片和目标建议卡片渲染
   Widget _buildMessageContent(BuildContext context, String answer) {
-    print('解析聊天消息: ${answer.length > 100 ? answer.substring(0, 100) + '...' : answer}');
     
-    // 检测是否包含JSON代码块
-    final RegExp jsonBlockRegex = RegExp(r'```json\s*([\s\S]*?)\s*```');
-    final matches = jsonBlockRegex.allMatches(answer);
-    
-    if (matches.isNotEmpty) {
-      // 尝试解析保险产品
-      final products = InsuranceProduct.fromMarkdown(answer);
-      print('识别到${products.length}个保险产品');
-      
-      if (products.isNotEmpty) {
-        // 处理消息中的文本内容，移除JSON代码块
+    return Consumer<SettingsService>(
+      builder: (context, settingsService, child) {
+        // 只在流式输出完全结束后才解析JSON内容
+        // isResponding为true表示还在接收流式数据，此时不应该解析
+        final shouldParseJsonContent = !isResponding;
+        
+        // 存储处理后的内容
         String textContent = answer;
-        for (final match in matches) {
-          textContent = textContent.replaceRange(
-            match.start, 
-            match.end, 
-            ''
-          );
-        }
+        List<Widget> additionalWidgets = [];
         
-        // 移除多余的空行
-        textContent = textContent.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-        
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 显示文本内容，如果有的话
-            if (textContent.trim().isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: MarkdownBody(
-                  data: textContent,
-                  selectable: true,
-                  styleSheet: MarkdownStyleSheet(
-                    p: const TextStyle(
-                      fontSize: 16,
-                      height: 1.5,
-                      color: Colors.black87,
-                    ),
-                    code: TextStyle(
-                      fontSize: 14,
-                      backgroundColor: Colors.grey.withAlpha(51),
-                      fontFamily: 'monospace',
-                    ),
-                    codeblockDecoration: BoxDecoration(
-                      color: Colors.grey.withAlpha(51),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ),
+        if (shouldParseJsonContent) {
+          debugPrint('开始解析完整消息内容 (长度: ${answer.length})');
+          
+          // 优先检测完整的JSON格式（如{"answer": {...}}）
+          bool foundCompleteJson = false;
+          
+          // 检测是否包含完整的JSON格式
+          if (answer.contains('{"answer":') || answer.contains('"目标"') || answer.contains('"子目标"') || answer.contains('"任务"')) {
+            debugPrint('检测到可能的完整JSON格式，直接处理');
             
-            // 显示保险产品卡片
-            InsuranceProductCardList(
-              products: products,
-              onProductSelected: onProductSelected,
-            ),
-          ],
-        );
-      }
-    } else {
-      // 如果没有找到标准的JSON代码块，尝试检测可能的非标准格式JSON
-      try {
-        // 检查是否包含类似JSON的内容（在方括号或大括号中的内容）
-        final RegExp bracketContentRegex = RegExp(r'\[\s*\{[\s\S]*?\}\s*\]|\{\s*"[\s\S]*?\}\s*');
-        final bracketMatches = bracketContentRegex.allMatches(answer);
-        
-        if (bracketMatches.isNotEmpty) {
-          for (final match in bracketMatches) {
-            final content = match.group(0)!;
-            try {
-              // 尝试解析内容为JSON
-              final dynamic parsed = json.decode(content);
-              if (parsed != null) {
-                print('检测到可能的JSON内容: ${content.substring(0, min(100, content.length))}...');
-                
-                // 构造带有JSON代码块的Markdown
-                final jsonMarkdown = '```json\n$content\n```';
-                final products = InsuranceProduct.fromMarkdown(jsonMarkdown);
-                
+            // 处理保险产品
+            if (settingsService.insuranceJsonDetectionEnabled) {
+              final products = InsuranceProduct.fromMarkdown(answer);
+              if (products.isNotEmpty) {
+                debugPrint('识别到${products.length}个保险产品');
+                additionalWidgets.add(
+                  InsuranceProductCardList(
+                    products: products,
+                    onProductSelected: onProductSelected,
+                  )
+                );
+                foundCompleteJson = true;
+              }
+            }
+            
+            // 处理目标建议
+            if (settingsService.goalJsonDetectionEnabled) {
+              final goalSuggestions = GoalSuggestionSet.fromMarkdown(answer);
+              if (goalSuggestions.isNotEmpty) {
+                debugPrint('识别到${goalSuggestions.length}个目标建议集合');
+                additionalWidgets.add(
+                  GoalSuggestionCardList(
+                    suggestionSets: goalSuggestions,
+                    onAccept: (suggestionSet) => _handleGoalSuggestionAccept(context, suggestionSet),
+                    onReject: (suggestionSet) => _handleGoalSuggestionReject(context, suggestionSet),
+                  )
+                );
+                foundCompleteJson = true;
+              }
+            }
+          }
+          
+          // 如果没有找到完整的JSON格式，才处理JSON代码块
+          if (!foundCompleteJson) {
+            debugPrint('未找到完整JSON格式，尝试处理JSON代码块');
+            
+            // 检测是否包含JSON代码块
+            final RegExp jsonBlockRegex = RegExp(r'```json\s*([\s\S]*?)\s*```');
+            final matches = jsonBlockRegex.allMatches(answer);
+            
+            if (matches.isNotEmpty) {
+              // 处理保险产品
+              if (settingsService.insuranceJsonDetectionEnabled) {
+                final products = InsuranceProduct.fromMarkdown(answer);
                 if (products.isNotEmpty) {
-                  print('成功解析出${products.length}个保险产品');
-                  
-                  // 处理消息中的文本内容，移除JSON内容
-                  String textContent = answer;
-                  textContent = textContent.replaceRange(match.start, match.end, '');
-                  
-                  // 移除多余的空行
-                  textContent = textContent.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-                  
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 显示文本内容，如果有的话
-                      if (textContent.trim().isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 16.0),
-                          child: MarkdownBody(
-                            data: textContent,
-                            selectable: true,
-                            styleSheet: MarkdownStyleSheet(
-                              p: const TextStyle(
-                                fontSize: 16,
-                                height: 1.5,
-                                color: Colors.black87,
-                              ),
-                              code: TextStyle(
-                                fontSize: 14,
-                                backgroundColor: Colors.grey.withAlpha(51),
-                                fontFamily: 'monospace',
-                              ),
-                              codeblockDecoration: BoxDecoration(
-                                color: Colors.grey.withAlpha(51),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                          ),
-                        ),
-                      
-                      // 显示保险产品卡片
-                      InsuranceProductCardList(
-                        products: products,
-                        onProductSelected: onProductSelected,
-                      ),
-                    ],
+                  debugPrint('识别到${products.length}个保险产品');
+                  additionalWidgets.add(
+                    InsuranceProductCardList(
+                      products: products,
+                      onProductSelected: onProductSelected,
+                    )
                   );
                 }
               }
+              
+              // 处理目标建议
+              if (settingsService.goalJsonDetectionEnabled) {
+                final goalSuggestions = GoalSuggestionSet.fromMarkdown(answer);
+                if (goalSuggestions.isNotEmpty) {
+                  debugPrint('识别到${goalSuggestions.length}个目标建议集合');
+                  additionalWidgets.add(
+                    GoalSuggestionCardList(
+                      suggestionSets: goalSuggestions,
+                      onAccept: (suggestionSet) => _handleGoalSuggestionAccept(context, suggestionSet),
+                      onReject: (suggestionSet) => _handleGoalSuggestionReject(context, suggestionSet),
+                    )
+                  );
+                }
+              }
+              
+              // 如果找到了内容，移除JSON代码块
+              if (additionalWidgets.isNotEmpty) {
+                for (final match in matches) {
+                  textContent = textContent.replaceRange(
+                    match.start, 
+                    match.end, 
+                    ''
+                  );
+                }
+                
+                // 移除多余的空行
+                textContent = textContent.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+              }
+            }
+          }
+          
+          // 移除完整JSON格式的内容（如果找到了）
+          if (foundCompleteJson) {
+            // 移除完整的JSON格式内容
+            textContent = textContent.replaceAll(RegExp(r'\{"answer":\s*\{.*?\}\}'), '');
+            
+            // 移除JSON代码块
+            textContent = textContent.replaceAll(RegExp(r'```json\s*[\s\S]*?\s*```'), '');
+            
+            // 移除多余的空行
+            textContent = textContent.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+          }
+          
+          // 如果没有找到标准的JSON代码块，尝试检测可能的非标准格式JSON
+          if (additionalWidgets.isEmpty) {
+            try {
+              final RegExp bracketContentRegex = RegExp(r'\[\s*\{[\s\S]*?\}\s*\]|\{\s*"[\s\S]*?\}\s*');
+              final bracketMatches = bracketContentRegex.allMatches(answer);
+              
+              if (bracketMatches.isNotEmpty) {
+                for (final match in bracketMatches) {
+                  final content = match.group(0)!;
+                  try {
+                    final dynamic parsed = json.decode(content);
+                    if (parsed != null) {
+                      // 构造带有JSON代码块的Markdown
+                      final jsonMarkdown = '```json\n$content\n```';
+                      
+                      // 检查保险产品
+                      if (settingsService.insuranceJsonDetectionEnabled) {
+                        final products = InsuranceProduct.fromMarkdown(jsonMarkdown);
+                        if (products.isNotEmpty) {
+                          debugPrint('成功解析出${products.length}个保险产品');
+                          additionalWidgets.add(
+                            InsuranceProductCardList(
+                              products: products,
+                              onProductSelected: onProductSelected,
+                            )
+                          );
+                        }
+                      }
+                      
+                      // 检查目标建议
+                      if (settingsService.goalJsonDetectionEnabled) {
+                        final goalSuggestions = GoalSuggestionSet.fromMarkdown(jsonMarkdown);
+                        if (goalSuggestions.isNotEmpty) {
+                          debugPrint('成功解析出${goalSuggestions.length}个目标建议集合');
+                          additionalWidgets.add(
+                            GoalSuggestionCardList(
+                              suggestionSets: goalSuggestions,
+                              onAccept: (suggestionSet) => _handleGoalSuggestionAccept(context, suggestionSet),
+                              onReject: (suggestionSet) => _handleGoalSuggestionReject(context, suggestionSet),
+                            )
+                          );
+                        }
+                      }
+                      
+                      if (additionalWidgets.isNotEmpty) {
+                        // 处理消息中的文本内容，移除JSON内容
+                        textContent = textContent.replaceRange(match.start, match.end, '');
+                        
+                        // 移除多余的空行
+                        textContent = textContent.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+                        break; // 找到一个就停止
+                      }
+                    }
+                  } catch (e) {
+                    // 减少不必要的错误日志
+                    // debugPrint('尝试解析可能的JSON内容失败: $e');
+                  }
+                }
+              }
             } catch (e) {
-              print('尝试解析可能的JSON内容失败: $e');
+              // 减少不必要的错误日志
+              // debugPrint('检测非标准格式JSON时出错: $e');
             }
           }
         }
-      } catch (e) {
-        print('检测非标准格式JSON时出错: $e');
-      }
-    }
+        
+        // 构建最终的内容
+        if (additionalWidgets.isNotEmpty) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 显示文本内容，如果有的话
+              if (textContent.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: MarkdownBody(
+                    data: textContent,
+                    selectable: true,
+                    styleSheet: MarkdownStyleSheet(
+                      p: const TextStyle(
+                        fontSize: 16,
+                        height: 1.5,
+                        color: Colors.black87,
+                      ),
+                      code: TextStyle(
+                        fontSize: 14,
+                        backgroundColor: Colors.grey.withAlpha(51),
+                        fontFamily: 'monospace',
+                      ),
+                      codeblockDecoration: BoxDecoration(
+                        color: Colors.grey.withAlpha(51),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              
+              // 显示附加组件
+              ...additionalWidgets,
+            ],
+          );
+        }
+        
+        // 默认渲染为Markdown
+        return MarkdownBody(
+          data: answer,
+          selectable: true,
+          styleSheet: MarkdownStyleSheet(
+            p: const TextStyle(
+              fontSize: 16,
+              height: 1.5,
+              color: Colors.black87,
+            ),
+            code: TextStyle(
+              fontSize: 14,
+              backgroundColor: Colors.grey.withAlpha(51),
+              fontFamily: 'monospace',
+            ),
+            codeblockDecoration: BoxDecoration(
+              color: Colors.grey.withAlpha(51),
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// 处理目标建议接受
+  Future<void> _handleGoalSuggestionAccept(BuildContext context, GoalSuggestionSet suggestionSet) async {
+    debugPrint('用户接受了目标建议');
     
-    // 默认渲染为Markdown
-    return MarkdownBody(
-      data: answer,
-      selectable: true,
-      styleSheet: MarkdownStyleSheet(
-        p: const TextStyle(
-          fontSize: 16,
-          height: 1.5,
-          color: Colors.black87,
+    // 显示加载指示器
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+    
+    try {
+      final success = await GoalSuggestionService.acceptGoalSuggestion(context, suggestionSet);
+      
+      // 关闭加载指示器
+      Navigator.of(context).pop();
+      
+      if (success) {
+        // 标记为已接受
+        final settingsService = Provider.of<SettingsService>(context, listen: false);
+        await settingsService.markGoalSuggestionAccepted(suggestionSet.id);
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('目标已成功添加到您的规划中'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('添加目标失败，请稍后重试'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      // 关闭加载指示器
+      Navigator.of(context).pop();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('操作失败: $e'),
+          backgroundColor: Colors.red,
         ),
-        code: TextStyle(
-          fontSize: 14,
-          backgroundColor: Colors.grey.withAlpha(51),
-          fontFamily: 'monospace',
-        ),
-        codeblockDecoration: BoxDecoration(
-          color: Colors.grey.withAlpha(51),
-          borderRadius: BorderRadius.circular(8),
-        ),
+      );
+    }
+  }
+
+  /// 处理目标建议拒绝
+  void _handleGoalSuggestionReject(BuildContext context, GoalSuggestionSet suggestionSet) {
+    debugPrint('用户拒绝了目标建议');
+    
+    GoalSuggestionService.rejectGoalSuggestion(suggestionSet);
+    
+    // 标记为已拒绝
+    final settingsService = Provider.of<SettingsService>(context, listen: false);
+    settingsService.markGoalSuggestionRejected(suggestionSet.id);
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('已忽略该目标建议'),
+        duration: Duration(seconds: 1),
       ),
     );
   }
@@ -351,78 +484,95 @@ class ChatMessageItem extends StatelessWidget {
     );
   }
 
-  /// 构建消息文件（图片等）
-  Widget _buildMessageFiles(List<MessageFile> files) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8.0),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: files.map((file) {
-          if (file.type == 'image') {
-            return ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                file.url,
-                width: 200,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    width: 200,
-                    height: 150,
-                    color: Colors.grey.withAlpha(51),
-                    child: const Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 200,
-                    height: 150,
-                    color: Colors.grey.withAlpha(51),
-                    child: const Center(
-                      child: Icon(Icons.error, color: Colors.red),
-                    ),
-                  );
-                },
-              ),
-            );
-          }
-          return const SizedBox.shrink();
-        }).toList(),
+  /// 构建操作按钮
+  Widget _buildActionButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: Colors.grey.withAlpha(25),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Icon(
+          icon,
+          size: 16,
+          color: Colors.grey[600],
+        ),
       ),
     );
   }
 
-  /// 构建引用和归属信息
-  Widget _buildRetrieverResources(List<RetrieverResource> resources) {
-    return Container(
-      margin: const EdgeInsets.only(top: 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey.withAlpha(26),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.withAlpha(77)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '引用来源',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-          ),
-          const SizedBox(height: 8),
-          ...resources.map((resource) => Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Text(
-              '${resource.position}. ${resource.documentName} - ${resource.datasetName}',
-              style: const TextStyle(fontSize: 12),
-            ),
-          )),
-        ],
-      ),
+  /// 构建消息文件（图片等）
+  Widget _buildMessageFiles(List<dynamic> files) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: files.map((file) {
+        if (file is Map<String, dynamic>) {
+          final fileType = file['type'] as String?;
+          final fileName = file['name'] as String?;
+          final fileUrl = file['url'] as String?;
+          
+          if (fileType == 'image' && fileUrl != null) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  fileUrl,
+                  width: 200,
+                  height: 200,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: 200,
+                      height: 200,
+                      color: Colors.grey[300],
+                      child: const Icon(
+                        Icons.error,
+                        color: Colors.grey,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            );
+          } else {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.insert_drive_file,
+                    color: Colors.grey[600],
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      fileName ?? 'Unknown file',
+                      style: TextStyle(
+                        color: Colors.grey[800],
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+        }
+        return const SizedBox.shrink();
+      }).toList(),
     );
   }
 }
@@ -449,19 +599,22 @@ class _AnimatedDotsWidgetState extends State<AnimatedDotsWidget>
   void initState() {
     super.initState();
     _controller = AnimationController(
+      duration: const Duration(milliseconds: 1000),
       vsync: this,
-      duration: const Duration(milliseconds: 600),
-    )..repeat(reverse: true);
+    );
+    _animation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    ));
 
     Future.delayed(Duration(milliseconds: widget.delayInMilliseconds), () {
       if (mounted) {
-        _controller.forward();
+        _controller.repeat(reverse: true);
       }
     });
-
-    _animation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
   }
 
   @override
@@ -479,7 +632,7 @@ class _AnimatedDotsWidgetState extends State<AnimatedDotsWidget>
           width: 8,
           height: 8,
           decoration: BoxDecoration(
-            color: Colors.grey.withAlpha(128 + ((_animation.value * 0.5) * 127).round()),
+            color: Colors.grey[600]!.withOpacity(_animation.value),
             shape: BoxShape.circle,
           ),
         );

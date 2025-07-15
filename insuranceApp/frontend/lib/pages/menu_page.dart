@@ -3,11 +3,12 @@ import 'package:provider/provider.dart';
 
 import '../models/dify_models.dart';
 import '../services/chat_service.dart';
+import '../services/settings_service.dart';
 import '../widgets/ai_module_card.dart';
 import '../widgets/conversation_item.dart';
 
 /// 菜单页面
-/// 包含AI模块选择和会话列表，右上角有返回按钮
+/// 包含AI模块选择、会话列表和设置选项，右上角有返回按钮
 class MenuPage extends StatefulWidget {
   const MenuPage({Key? key}) : super(key: key);
 
@@ -32,19 +33,39 @@ class _MenuPageState extends State<MenuPage> {
   @override
   void initState() {
     super.initState();
-    // 初始化聊天服务
+    // 初始化聊天服务和设置服务
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initChatService();
+      _initServices();
     });
+  }
+  
+  // 初始化服务
+  Future<void> _initServices() async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      // 初始化设置服务
+      final settingsService = SettingsService();
+      await settingsService.init();
+      
+      // 初始化聊天服务
+      await _initChatService();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('初始化失败: $e')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
   
   // 初始化聊天服务
   Future<void> _initChatService() async {
     final chatService = Provider.of<ChatService>(context, listen: false);
-    
-    setState(() {
-      _isLoading = true;
-    });
     
     try {
       // 已初始化ChatService
@@ -74,12 +95,8 @@ class _MenuPageState extends State<MenuPage> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('初始化失败: $e')),
+        SnackBar(content: Text('初始化聊天服务失败: $e')),
       );
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
     }
   }
   
@@ -170,9 +187,16 @@ class _MenuPageState extends State<MenuPage> {
               _buildSectionTitle('历史对话', Icons.history_outlined),
               SizedBox(height: verticalPadding * 0.4),
               SizedBox(
-                height: size.height * 0.5, // 增加高度，因为没有常见问题部分
+                height: size.height * 0.35, // 减少高度为设置区域留空间
                 child: _buildConversationsSection(chatService),
               ),
+              
+              SizedBox(height: verticalPadding * 1.0),
+              
+              // 设置区域
+              _buildSectionTitle('设置', Icons.settings_outlined),
+              SizedBox(height: verticalPadding * 0.4),
+              _buildSettingsSection(),
               
               SizedBox(height: verticalPadding),
             ],
@@ -303,124 +327,158 @@ class _MenuPageState extends State<MenuPage> {
     );
   }
   
-  // 构建重命名对话框
-  Widget _buildRenameDialog(Conversation conversation) {
-    final TextEditingController controller = TextEditingController(text: conversation.name);
-    final primaryColor = const Color(0xFF8E6FF7); // 更新为设计稿中的紫色
-    final lightPurple = const Color(0xFFF8F5FF); // 更新为设计稿中的浅紫色
-    
-    return AlertDialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12), // 更圆的对话框
-      ),
-      title: Text(
-        '重命名会话',
-        style: TextStyle(
-          color: primaryColor,
-          fontWeight: FontWeight.w500,
-          fontSize: 17,
-        ),
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              hintText: '输入新的会话名称',
-              hintStyle: TextStyle(
-                color: Colors.grey[400],
-                fontSize: 14,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[200]!),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(
-                  color: primaryColor,
-                  width: 1.5,
+  // 构建设置区域
+  Widget _buildSettingsSection() {
+    return Consumer<SettingsService>(
+      builder: (context, settingsService, child) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 10),
+              child: Text(
+                '智能功能开关',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.grey[700],
                 ),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             ),
-            style: const TextStyle(fontSize: 14),
-            autofocus: true,
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Icon(
-                Icons.auto_awesome,
-                size: 15,
-                color: primaryColor,
+            Card(
+              elevation: 1,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-              const SizedBox(width: 6),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    // 保险产品JSON检测开关
+                    SwitchListTile(
+                      title: const Text(
+                        '保险产品检测',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        '自动检测AI回答中的保险产品信息',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                      value: settingsService.insuranceJsonDetectionEnabled,
+                      onChanged: (value) {
+                        settingsService.setInsuranceJsonDetectionEnabled(value);
+                      },
+                      activeColor: Theme.of(context).primaryColor,
+                    ),
+
+                    const Divider(height: 1),
+
+                    // 目标检测开关
+                    SwitchListTile(
+                      title: const Text(
+                        '目标建议检测',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        '自动检测AI回答中的目标建议信息',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                      value: settingsService.goalJsonDetectionEnabled,
+                      onChanged: (value) {
+                        settingsService.setGoalJsonDetectionEnabled(value);
+                      },
+                      activeColor: Theme.of(context).primaryColor,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  
+  // 构建设置项
+  Widget _buildSettingItem({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: _primaryColor, size: 20),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text(
-                '或自动生成名称',
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
                 style: TextStyle(
-                  color: Colors.grey[600],
                   fontSize: 13,
+                  color: Colors.grey[600],
                 ),
               ),
             ],
           ),
-        ],
+        ),
+        Switch(
+          value: value,
+          onChanged: onChanged,
+          activeColor: _primaryColor,
+        ),
+      ],
+    );
+  }
+  
+  // 构建重命名对话框
+  Widget _buildRenameDialog(Conversation conversation) {
+    final controller = TextEditingController(text: conversation.name);
+    
+    return AlertDialog(
+      title: const Text('重命名对话'),
+      content: TextField(
+        controller: controller,
+        decoration: const InputDecoration(
+          hintText: '输入新的对话名称',
+          border: OutlineInputBorder(),
+        ),
+        autofocus: true,
       ),
-      backgroundColor: Colors.white,
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.grey[600],
-          ),
-          child: Text(
-            '取消',
-            style: TextStyle(
-              fontSize: 14,
-            ),
-          ),
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
         ),
         TextButton(
-          onPressed: () {
-            final chatService = Provider.of<ChatService>(context, listen: false);
-            chatService.renameConversation(
-              conversation.id,
-              controller.text,
-            );
-            Navigator.of(context).pop();
+          onPressed: () async {
+            final newName = controller.text.trim();
+            if (newName.isNotEmpty) {
+              Navigator.pop(context);
+              final chatService = Provider.of<ChatService>(context, listen: false);
+              await chatService.renameConversation(conversation.id, newName);
+            }
           },
-          style: TextButton.styleFrom(
-            foregroundColor: primaryColor,
-          ),
-          child: Text(
-            '确认',
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 14,
-            ),
-          ),
-        ),
-        TextButton(
-          onPressed: () {
-            final chatService = Provider.of<ChatService>(context, listen: false);
-            chatService.renameConversation(
-              conversation.id,
-              null,
-              autoGenerate: true,
-            );
-            Navigator.of(context).pop();
-          },
-          style: TextButton.styleFrom(
-            foregroundColor: primaryColor,
-          ),
-          child: Text(
-            '自动生成',
-            style: TextStyle(
-              fontSize: 14,
-            ),
-          ),
+          child: const Text('确定'),
         ),
       ],
     );

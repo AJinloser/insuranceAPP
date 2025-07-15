@@ -15,6 +15,7 @@ import 'services/insurance_service.dart';
 import 'services/insurance_list_service.dart';
 import 'services/user_info_service.dart';
 import 'services/goal_service.dart';
+import 'services/settings_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,6 +51,15 @@ void main() async {
   // 初始化目标服务
   final goalService = GoalService();
   
+  // 初始化设置服务
+  final settingsService = SettingsService();
+  try {
+    await settingsService.init();
+    debugPrint("===> SettingsService初始化成功");
+  } catch (e) {
+    debugPrint("===> SettingsService初始化失败: $e");
+  }
+  
   runApp(
     MultiProvider(
       providers: [
@@ -58,6 +68,7 @@ void main() async {
         ChangeNotifierProvider.value(value: insuranceService),
         ChangeNotifierProvider.value(value: insuranceListService),
         ChangeNotifierProvider.value(value: goalService),
+        ChangeNotifierProvider.value(value: settingsService),
         ChangeNotifierProxyProvider<AuthService, UserInfoService>(
           create: (context) => UserInfoService(authService),
           update: (context, auth, previous) => previous ?? UserInfoService(auth),

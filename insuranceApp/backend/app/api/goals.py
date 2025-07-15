@@ -202,6 +202,7 @@ def update_goal_basic_info(
         db.refresh(goal_record)
         
         print(f"更新目标基本信息成功，保留了现有的子目标和子任务数据")
+        print(f"更新后的目标数据: {goal_record.goals}")
         
         return ApiResponse(
             code=200,
