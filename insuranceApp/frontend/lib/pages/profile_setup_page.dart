@@ -39,6 +39,38 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   // 目标信息控制器
   final _goalDetailsController = TextEditingController();
 
+  // 模块信息配置
+  final List<ModuleInfo> _modules = [
+    ModuleInfo(
+      title: '智能助手',
+      description: 'AI保险顾问，为您答疑解惑',
+      icon: Icons.chat_bubble_outline,
+      color: Color(0xFF4CAF50),
+      tabIndex: 0,
+    ),
+    ModuleInfo(
+      title: '保险服务',
+      description: '浏览和比较保险产品',
+      icon: Icons.shield_outlined,
+      color: Color(0xFF2196F3),
+      tabIndex: 1,
+    ),
+    ModuleInfo(
+      title: '财务规划',
+      description: '制定和管理财务目标',
+      icon: Icons.trending_up,
+      color: Color(0xFFFF9800),
+      tabIndex: 2,
+    ),
+    ModuleInfo(
+      title: '个人中心',
+      description: '管理个人信息和设置',
+      icon: Icons.person_outline,
+      color: Color(0xFF9C27B0),
+      tabIndex: 3,
+    ),
+  ];
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -56,7 +88,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
 
   // 下一页
   void _nextPage() {
-    if (_currentPage < 3) {
+    if (_currentPage < 4) { // 修改最大页面数
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -108,11 +140,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       final success = await userInfoService.updateUserInfo(userInfo);
 
       if (success && mounted) {
-        print('===> ProfileSetupPage: 跳过设置成功');
-        
-        // 标记新用户设置完成
-        final authService = Provider.of<AuthService>(context, listen: false);
-        authService.completeNewUserSetup();
+        print('===> ProfileSetupPage: 跳过设置成功，跳转到欢迎页面');
         
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -121,8 +149,12 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
           ),
         );
         
-        print('===> ProfileSetupPage: 跳过设置完成，AuthService将处理页面切换');
-        // 不需要手动导航，AuthService状态变化会自动触发页面切换到HomePage
+        // 跳转到欢迎页面
+        _pageController.animateToPage(
+          4, // 直接跳转到第5页（索引4）
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
       } else if (mounted) {
         print('===> ProfileSetupPage: 跳过设置失败');
         ScaffoldMessenger.of(context).showSnackBar(
@@ -190,26 +222,22 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       final success = await userInfoService.updateUserInfo(userInfo);
 
       if (success && mounted) {
-        print('===> ProfileSetupPage: 个人信息提交成功');
-        
-        // 标记新用户设置完成
-        final authService = Provider.of<AuthService>(context, listen: false);
-        authService.completeNewUserSetup();
+        print('===> ProfileSetupPage: 个人信息提交成功，跳转到欢迎页面');
         
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('个人信息初始化成功'),
+            content: Text('个人信息保存成功'),
             backgroundColor: Colors.green,
           ),
         );
         
-        print('===> ProfileSetupPage: 个人信息初始化完成，AuthService将处理页面切换');
-        // 不需要手动导航，AuthService状态变化会自动触发页面切换到HomePage
+        // 跳转到欢迎页面
+        _nextPage();
       } else if (mounted) {
         print('===> ProfileSetupPage: 个人信息提交失败');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(userInfoService.error ?? '初始化失败'),
+            content: Text(userInfoService.error ?? '保存失败'),
             backgroundColor: Colors.red,
           ),
         );
@@ -219,7 +247,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('初始化失败: $e'),
+            content: Text('保存失败: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -231,6 +259,21 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         });
       }
     }
+  }
+
+  // 跳转到指定模块
+  void _navigateToModule(int tabIndex) {
+    print('===> ProfileSetupPage: 用户选择进入模块: $tabIndex');
+    
+    // 标记新用户设置完成
+    final authService = Provider.of<AuthService>(context, listen: false);
+    authService.completeNewUserSetup();
+    
+    // 导航到首页指定tab
+    Navigator.of(context).pushReplacementNamed(
+      '/home',
+      arguments: {'initialTabIndex': tabIndex},
+    );
   }
 
   @override
@@ -290,6 +333,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                         _buildBasicInfoPage(),
                         _buildFinancialInfoPage(),
                         _buildGoalInfoPage(),
+                        _buildWelcomePage(), // 添加新的欢迎页面
                       ],
                     ),
                   ),
@@ -309,7 +353,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   Widget _buildPageIndicator() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(4, (index) {
+      children: List.generate(5, (index) { // 修改页面数量为5
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 4),
           width: 12,
@@ -583,6 +627,86 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     );
   }
 
+  // 欢迎页面
+  Widget _buildWelcomePage() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // 欢迎标题
+          Text(
+            '欢迎使用 Skysail',
+            style: TextStyle(
+              fontSize: 24.0,
+              fontWeight: FontWeight.bold,
+              color: _primaryColor,
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // 欢迎语
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.purple.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.purple.shade200),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.celebration,
+                  color: _primaryColor,
+                  size: 32,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '设置完成！您可以从以下模块开始探索',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[700],
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '如有困惑，可进入个人中心的帮助与反馈查看使用教程',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[600],
+                    height: 1.3,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          
+          // 模块卡片网格
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.2,
+            ),
+            itemCount: _modules.length,
+            itemBuilder: (context, index) {
+              return _ModuleCard(
+                moduleInfo: _modules[index],
+                onTap: () => _navigateToModule(_modules[index].tabIndex),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   // 底部按钮
   Widget _buildBottomButtons() {
     return Padding(
@@ -602,7 +726,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
             ),
           
           // 上一页按钮
-          if (_currentPage > 0)
+          if (_currentPage > 0 && _currentPage < 4) // 欢迎页面不显示上一页按钮
             Expanded(
               child: CustomButton(
                 text: '上一页',
@@ -612,19 +736,116 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
               ),
             ),
           
-          if (_currentPage > 0 || _currentPage == 0) const SizedBox(width: 16),
+          if ((_currentPage > 0 && _currentPage < 4) || _currentPage == 0) const SizedBox(width: 16),
 
-          // 下一页/提交按钮
-          Expanded(
-            child: CustomButton(
-              text: _currentPage == 3 ? '完成设置' : '下一页',
-              onPressed: _currentPage == 3 ? _submitForm : _nextPage,
-              isLoading: _isLoading,
-              backgroundColor: _primaryColor,
-              isFullWidth: true,
+          // 下一页/提交按钮 (欢迎页面不显示此按钮)
+          if (_currentPage < 4)
+            Expanded(
+              child: CustomButton(
+                text: _currentPage == 3 ? '完成设置' : '下一页',
+                onPressed: _currentPage == 3 ? _submitForm : _nextPage,
+                isLoading: _isLoading,
+                backgroundColor: _primaryColor,
+                isFullWidth: true,
+              ),
             ),
-          ),
         ],
+      ),
+    );
+  }
+}
+
+// 模块信息数据类
+class ModuleInfo {
+  final String title;
+  final String description;
+  final IconData icon;
+  final Color color;
+  final int tabIndex;
+
+  const ModuleInfo({
+    required this.title,
+    required this.description,
+    required this.icon,
+    required this.color,
+    required this.tabIndex,
+  });
+}
+
+// 模块卡片组件
+class _ModuleCard extends StatelessWidget {
+  final ModuleInfo moduleInfo;
+  final VoidCallback onTap;
+
+  const _ModuleCard({
+    required this.moduleInfo,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: moduleInfo.color.withOpacity(0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: moduleInfo.color.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // 图标
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: moduleInfo.color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                moduleInfo.icon,
+                color: moduleInfo.color,
+                size: 28,
+              ),
+            ),
+            const SizedBox(height: 8),
+            
+            // 标题
+            Text(
+              moduleInfo.title,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[800],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            
+            // 描述
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                moduleInfo.description,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[600],
+                  height: 1.2,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
