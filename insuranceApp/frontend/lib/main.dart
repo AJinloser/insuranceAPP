@@ -17,6 +17,9 @@ import 'services/user_info_service.dart';
 import 'services/goal_service.dart';
 import 'services/settings_service.dart';
 
+// 全局RouteObserver
+final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -85,8 +88,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '保险咨询APP',
+      title: '保险规划助手',
       debugShowCheckedModeBanner: false,
+      navigatorObservers: [routeObserver], // 添加RouteObserver
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -97,8 +101,10 @@ class MyApp extends StatelessWidget {
         Locale('en', 'US'),
       ],
       theme: ThemeData(
-        primarySwatch: Colors.purple,
-        primaryColor: const Color(0xFF8E6FF7),
+        primarySwatch: Colors.deepPurple,
+        primaryColor: const Color(0xFF6A1B9A),
+        fontFamily: 'PingFang SC',
+        useMaterial3: true,
         colorScheme: ColorScheme.light(
           primary: const Color(0xFF8E6FF7),
           secondary: const Color(0xFF8E6FF7),

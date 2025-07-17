@@ -14,6 +14,8 @@ class ConversationPage extends StatefulWidget {
   final String? initialQuestion;
   final String? productInfo;
   final VoidCallback? onInitialQuestionSent;
+  final VoidCallback? onNewConversation; // 新增回调
+  final Function(String conversationId)? onConversationCreated; // 新增：会话创建回调
 
   const ConversationPage({
     Key? key,
@@ -21,6 +23,8 @@ class ConversationPage extends StatefulWidget {
     this.initialQuestion,
     this.productInfo,
     this.onInitialQuestionSent,
+    this.onNewConversation,
+    this.onConversationCreated,
   }) : super(key: key);
 
   @override
@@ -58,6 +62,12 @@ class _ConversationPageState extends State<ConversationPage> {
   
   @override
   void dispose() {
+    // 当页面销毁时，自动终止正在进行的对话响应
+    final chatService = Provider.of<ChatService>(context, listen: false);
+    if (chatService.isSending) {
+      chatService.stopResponse();
+    }
+    
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -81,7 +91,10 @@ class _ConversationPageState extends State<ConversationPage> {
         await chatService.loadParametersForModule(chatService.selectedModule!);
       }
       
-      if (widget.conversationId != null) {
+      // 只有在conversationId不为空时才查找已有会话
+      if (widget.conversationId != null && widget.conversationId!.isNotEmpty) {
+        debugPrint('===> ConversationPage: 加载已有会话: ${widget.conversationId}');
+        
         // 查找会话
         final conversation = chatService.conversations.firstWhere(
           (c) => c.id == widget.conversationId,
@@ -90,6 +103,16 @@ class _ConversationPageState extends State<ConversationPage> {
         
         // 加载会话详情
         await chatService.loadConversation(conversation);
+      } else {
+        debugPrint('===> ConversationPage: 新会话模式，等待用户发送消息');
+        // 对于新会话，不需要预先创建会话，让sendMessage方法处理
+        // 只需要确保已加载模块参数
+        if (chatService.selectedModule?.parameters == null) {
+          await chatService.loadParametersForModule(chatService.selectedModule!);
+        }
+        
+        // 对于新会话，ChatService会在发送第一条消息时自动处理会话创建
+        // 这里不需要手动设置建议问题，ChatService会处理
       }
       
       // 如果有初始问题，在页面加载完成后自动发送
@@ -103,6 +126,7 @@ class _ConversationPageState extends State<ConversationPage> {
         });
       }
     } catch (e) {
+      debugPrint('===> ConversationPage: 加载会话失败: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('加载会话失败: $e')),
       );
@@ -124,13 +148,18 @@ class _ConversationPageState extends State<ConversationPage> {
     try {
       await chatService.createNewConversation();
       
-      // 导航到首页（而不是直接刷新当前页面）
       if (mounted) {
-        Navigator.pushReplacementNamed(
-          context, 
-          '/home',
-          arguments: {'conversationId': chatService.currentConversation?.id}
-        );
+        // 如果有回调函数，使用回调重置到默认聊天页面（tab内导航）
+        if (widget.onNewConversation != null) {
+          widget.onNewConversation!();
+        } else {
+          // 否则使用原来的导航逻辑（独立页面导航）
+          Navigator.pushReplacementNamed(
+            context, 
+            '/home',
+            arguments: {'conversationId': chatService.currentConversation?.id}
+          );
+        }
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -162,17 +191,50 @@ class _ConversationPageState extends State<ConversationPage> {
     
     final chatService = Provider.of<ChatService>(context, listen: false);
     
-    // 如果有产品信息且是首次发送消息，则包含产品信息
-    if (_hasProductInfo && isInitialQuestion) {
-      debugPrint('===> ConversationPage: 发送包含产品信息的消息');
-      await chatService.sendMessageStreamWithInputs(
-        message,
-        inputs: {'text': widget.productInfo!},
+    // 记录发送前的会话状态
+    final hadConversationBefore = chatService.currentConversation != null;
+    final conversationIdBefore = chatService.currentConversation?.id;
+    
+    try {
+      // 如果有产品信息且是首次发送消息，则包含产品信息
+      if (_hasProductInfo && isInitialQuestion) {
+        debugPrint('===> ConversationPage: 发送包含产品信息的消息');
+        await chatService.sendMessageStreamWithInputs(
+          message,
+          inputs: {'text': widget.productInfo!},
+        );
+        // 标记产品信息已使用，后续消息不再包含
+        _hasProductInfo = false;
+      } else {
+        await chatService.sendMessageStream(message);
+      }
+      
+      // 检查会话状态变化，使用多次检查确保捕获到变化
+      for (int i = 0; i < 10; i++) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        
+        final currentConversation = chatService.currentConversation;
+        if (currentConversation != null) {
+          final currentConversationId = currentConversation.id;
+          
+          // 如果之前没有会话或会话ID发生了变化，说明创建了新会话
+          if ((!hadConversationBefore || conversationIdBefore != currentConversationId)) {
+            debugPrint('===> ConversationPage: 检测到会话创建/变化: $currentConversationId');
+            
+            // 通知HomePage更新conversationId
+            if (widget.onConversationCreated != null) {
+              widget.onConversationCreated!(currentConversationId);
+            }
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('===> ConversationPage: 发送消息失败: $e');
+      // 处理发送失败的情况
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('发送消息失败: $e')),
       );
-      // 标记产品信息已使用，后续消息不再包含
-      _hasProductInfo = false;
-    } else {
-      await chatService.sendMessageStream(message);
     }
     
     // 滚动到底部
@@ -224,13 +286,16 @@ class _ConversationPageState extends State<ConversationPage> {
     
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () {
-            // 导航到菜单页面
-            Navigator.pushNamed(context, '/menu');
-          },
-        ),
+        // 让AppBar自动处理leading按钮，如果可以pop则显示返回按钮，否则显示自定义菜单按钮
+        leading: Navigator.canPop(context) 
+            ? null // 使用系统默认的返回按钮
+            : IconButton(
+                icon: const Icon(Icons.menu),
+                onPressed: () {
+                  // 导航到菜单页面
+                  Navigator.pushNamed(context, '/menu');
+                },
+              ),
         title: Consumer<ChatService>(
           builder: (context, chatService, child) {
             final conversation = chatService.currentConversation;
@@ -275,7 +340,35 @@ class _ConversationPageState extends State<ConversationPage> {
         final suggestedQuestions = chatService.suggestedQuestions;
         
         if (messages.isEmpty) {
-          return _buildWelcomeView(chatService);
+          // 简化的空状态显示，不再显示完整的欢迎视图
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.chat_bubble_outline,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '开始新的对话',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '在下方输入框输入您的问题',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          );
         }
         
         // 将每条消息拆分为用户问题和AI回答两个独立项
@@ -362,74 +455,6 @@ class _ConversationPageState extends State<ConversationPage> {
           padding: const EdgeInsets.all(16.0),
           children: messageWidgets,
         );
-      },
-    );
-  }
-  
-  Widget _buildWelcomeView(ChatService chatService) {
-    // 如果没有选中模块，显示默认欢迎视图
-    if (chatService.selectedModule == null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(
-              Icons.smart_toy_outlined,
-              size: 64,
-              color: Colors.grey,
-            ),
-            SizedBox(height: 16),
-            Text(
-              '请选择一个AI模块开始对话',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final selectedModule = chatService.selectedModule!;
-    final parameters = selectedModule.parameters;
-    final appInfo = selectedModule.appInfo;
-    
-    // 如果参数和应用信息都不可用，显示加载中
-    if (parameters == null || appInfo == null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(color: Theme.of(context).primaryColor),
-            const SizedBox(height: 16),
-            const Text('加载AI模块信息...'),
-          ],
-        ),
-      );
-    }
-    
-    // 使用AIWelcomeView组件展示AI模块欢迎界面
-    return AIWelcomeView(
-      moduleName: appInfo.name,
-      parameters: parameters,
-      onSubmit: (formData) async {
-        // 如果包含question字段，直接发送问题
-        if (formData.containsKey('question')) {
-          _messageController.text = formData['question']!;
-          await _sendMessage();
-          return;
-        }
-        
-        // 否则，拼接所有表单数据为一条消息发送
-        final message = formData.entries
-            .map((entry) => '${entry.key}: ${entry.value}')
-            .join('\n');
-        
-        if (message.isNotEmpty) {
-          _messageController.text = message;
-          await _sendMessage();
-        }
       },
     );
   }

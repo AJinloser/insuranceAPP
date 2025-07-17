@@ -327,10 +327,20 @@ class _ProfilePageState extends State<ProfilePage> {
               child: const Text('取消'),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
+              onPressed: () async {
+                Navigator.of(context).pop(); // 关闭对话框
+                
+                // 执行退出登录
                 final authService = Provider.of<AuthService>(context, listen: false);
-                authService.logout();
+                await authService.logout();
+                
+                // 手动清理导航栈并跳转到登录页面
+                if (mounted) {
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    '/',
+                    (route) => false, // 清除所有路由
+                  );
+                }
               },
               child: const Text('确定'),
             ),
