@@ -185,385 +185,192 @@ class GoalSuggestionSet {
     );
   }
 
-  /// 从Markdown JSON内容提取目标建议 - 支持分散JSON片段
+  /// 从Markdown JSON内容提取目标建议 - 超简化版本
   static List<GoalSuggestionSet> fromMarkdown(String markdown) {
     debugPrint('===> GoalSuggestionSet.fromMarkdown: 开始解析目标建议 (内容长度: ${markdown.length})');
     debugPrint('原始内容预览: ${markdown.substring(0, min(300, markdown.length))}...');
     
-    // 首先尝试解析完整的answer格式
-    String completeJson = _findCompleteAnswerJson(markdown);
-    if (completeJson.isNotEmpty) {
-      debugPrint('找到完整的answer格式JSON，长度: ${completeJson.length}');
-      return _parseCompleteJson(completeJson);
+    // 调试：检查是否包含关键字段
+    final containsGoal = markdown.contains('"目标名称"');
+    final containsSubGoal = markdown.contains('"子目标名称"');
+    final containsTask = markdown.contains('"任务名称"');
+    debugPrint('===> 内容检查: 包含目标名称=$containsGoal, 包含子目标名称=$containsSubGoal, 包含任务名称=$containsTask');
+    
+    // 如果不包含任何关键字段，直接返回
+    if (!containsGoal && !containsSubGoal && !containsTask) {
+      debugPrint('===> 内容中不包含目标相关字段，跳过解析');
+      return [];
     }
     
-    debugPrint('未找到完整的answer格式，尝试收集分散的JSON片段');
-    // 如果没有完整格式，尝试收集分散的JSON片段
-    return _collectAndParseFragments(markdown);
-  }
-
-  /// 查找完整的answer格式JSON
-  static String _findCompleteAnswerJson(String content) {
-    debugPrint('开始查找完整的answer格式JSON');
+    // 超简化策略：直接提取字段，不依赖JSON格式
+    final goals = _extractGoalsDirectly(markdown);
+    final subGoals = _extractSubGoalsDirectly(markdown);
+    final tasks = _extractTasksDirectly(markdown);
     
-    int startPos = content.indexOf('{"answer":');
-    if (startPos == -1) {
-      debugPrint('未找到{"answer":开头');
-      return '';
-    }
+    debugPrint('===> 直接提取结果: 目标${goals.length}个, 子目标${subGoals.length}个, 任务${tasks.length}个');
     
-    debugPrint('找到answer开始位置: $startPos');
-    
-    int braceCount = 0;
-    int endPos = startPos;
-    
-    for (int i = startPos; i < content.length; i++) {
-      if (content[i] == '{') {
-        braceCount++;
-      } else if (content[i] == '}') {
-        braceCount--;
-        if (braceCount == 0) {
-          endPos = i + 1;
-          break;
-        }
-      }
-    }
-    
-    debugPrint('括号匹配结束位置: $endPos, 括号计数: $braceCount');
-    
-    if (braceCount == 0 && endPos > startPos) {
-      String extractedJson = content.substring(startPos, endPos);
-      debugPrint('提取原始JSON长度: ${extractedJson.length}');
-      debugPrint('提取的原始JSON: ${extractedJson.substring(0, min(400, extractedJson.length))}...');
-      
-      String fixedJson = _fixJsonFormat(extractedJson);
-      debugPrint('修复后JSON长度: ${fixedJson.length}');
-      
-      return fixedJson;
-    }
-    
-    debugPrint('括号匹配失败或无效范围');
-    return '';
-  }
-
-  /// 解析完整的JSON
-  static List<GoalSuggestionSet> _parseCompleteJson(String jsonStr) {
-    debugPrint('开始解析完整JSON');
-    
-    try {
-      final dynamic parsed = json.decode(jsonStr);
-      debugPrint('JSON解码成功');
-      
-      if (parsed is Map<String, dynamic>) {
-        debugPrint('JSON是Map类型');
-        
-        Map<String, dynamic> dataMap = parsed.containsKey('answer') && parsed['answer'] is Map
-            ? parsed['answer']
-            : parsed;
-        
-        debugPrint('数据映射键: ${dataMap.keys.toList()}');
-        
-        // 检查每个字段的内容
-        if (dataMap.containsKey('目标')) {
-          debugPrint('找到目标字段，类型: ${dataMap['目标'].runtimeType}');
-          if (dataMap['目标'] is List) {
-            debugPrint('目标字段是List，长度: ${(dataMap['目标'] as List).length}');
-          } else {
-            debugPrint('目标字段内容: ${dataMap['目标']}');
-          }
-        } else {
-          debugPrint('未找到目标字段');
-        }
-        
-        if (dataMap.containsKey('子目标')) {
-          debugPrint('找到子目标字段，类型: ${dataMap['子目标'].runtimeType}');
-          if (dataMap['子目标'] is List) {
-            debugPrint('子目标字段是List，长度: ${(dataMap['子目标'] as List).length}');
-          }
-        } else {
-          debugPrint('未找到子目标字段');
-        }
-        
-        if (dataMap.containsKey('任务')) {
-          debugPrint('找到任务字段，类型: ${dataMap['任务'].runtimeType}');
-          if (dataMap['任务'] is List) {
-            debugPrint('任务字段是List，长度: ${(dataMap['任务'] as List).length}');
-          }
-        } else {
-          debugPrint('未找到任务字段');
-        }
-        
-        final goals = _extractGoals(dataMap);
-        final subGoals = _extractSubGoals(dataMap);
-        final tasks = _extractTasks(dataMap);
-        
-        debugPrint('===> 完整JSON解析成功: 目标${goals.length}个, 子目标${subGoals.length}个, 任务${tasks.length}个');
-        
-        if (goals.isNotEmpty || subGoals.isNotEmpty || tasks.isNotEmpty) {
-          // 生成唯一ID
-          final id = _generateUniqueId(goals, subGoals, tasks);
-          
-          return [GoalSuggestionSet(
-            id: id,
-            goals: goals,
-            subGoals: subGoals,
-            tasks: tasks,
-          )];
-        }
-      } else {
-        debugPrint('JSON不是Map类型，而是: ${parsed.runtimeType}');
-      }
-    } catch (e) {
-      debugPrint('===> 完整JSON解析失败: $e');
-      debugPrint('失败的JSON内容: ${jsonStr.substring(0, min(500, jsonStr.length))}...');
-    }
-    
-    return [];
-  }
-
-  /// 收集并解析分散的JSON片段
-  static List<GoalSuggestionSet> _collectAndParseFragments(String markdown) {
-    debugPrint('开始收集分散的JSON片段');
-    
-    List<GoalSuggestion> allGoals = [];
-    List<SubGoalSuggestion> allSubGoals = [];
-    List<TaskSuggestion> allTasks = [];
-    
-    // 查找所有JSON代码块
-    final RegExp jsonBlockRegex = RegExp(r'```json\s*([\s\S]*?)\s*```');
-    final matches = jsonBlockRegex.allMatches(markdown);
-    
-    for (final match in matches) {
-      try {
-        final String jsonContent = match.group(1)!;
-        
-        final dynamic parsed = json.decode(jsonContent);
-        
-        if (parsed is Map<String, dynamic>) {
-          // 检查是否是单个目标对象
-          if (_isGoalObject(parsed)) {
-            allGoals.add(GoalSuggestion(
-              goalName: parsed['目标名称'] ?? parsed['goalName'] ?? '未命名目标',
-              goalDescription: parsed['目标描述'] ?? parsed['goalDescription'] ?? '',
-              priority: parsed['优先级'] ?? parsed['priority'] ?? '',
-              targetAmount: parsed['目标金额'] ?? parsed['targetAmount'] ?? '',
-              expectedCompletionTime: _cleanTime(parsed['预计完成时间'] ?? parsed['expectedCompletionTime'] ?? ''),
-            ));
-          }
-          // 检查是否是单个子目标对象
-          else if (_isSubGoalObject(parsed)) {
-            allSubGoals.add(SubGoalSuggestion(
-              subGoalName: parsed['子目标名称'] ?? parsed['subGoalName'] ?? '未命名子目标',
-              subGoalDescription: parsed['子目标描述'] ?? parsed['subGoalDescription'] ?? '',
-              subGoalAmount: parsed['子目标金额'] ?? parsed['subGoalAmount'] ?? '',
-              expectedCompletionTime: _cleanTime(parsed['预计完成时间'] ?? parsed['expectedCompletionTime'] ?? ''),
-            ));
-          }
-          // 检查是否是单个任务对象
-          else if (_isTaskObject(parsed)) {
-            allTasks.add(TaskSuggestion(
-              taskName: parsed['任务名称'] ?? parsed['taskName'] ?? '未命名任务',
-              taskDescription: parsed['任务描述'] ?? parsed['taskDescription'] ?? '',
-              taskAmount: parsed['任务金额'] ?? parsed['taskAmount'] ?? '',
-              expectedCompletionTime: _cleanTime(parsed['预计完成时间'] ?? parsed['expectedCompletionTime'] ?? ''),
-            ));
-          }
-        }
-        else if (parsed is List && parsed.isNotEmpty) {
-          // 检查是否是子目标数组
-          if (parsed[0] is Map<String, dynamic> && _isSubGoalObject(parsed[0])) {
-            for (final item in parsed) {
-              if (item is Map<String, dynamic>) {
-                allSubGoals.add(SubGoalSuggestion(
-                  subGoalName: item['子目标名称'] ?? item['subGoalName'] ?? '未命名子目标',
-                  subGoalDescription: item['子目标描述'] ?? item['subGoalDescription'] ?? '',
-                  subGoalAmount: item['子目标金额'] ?? item['subGoalAmount'] ?? '',
-                  expectedCompletionTime: _cleanTime(item['预计完成时间'] ?? item['expectedCompletionTime'] ?? ''),
-                ));
-              }
-            }
-          }
-          // 检查是否是任务数组
-          else if (parsed[0] is Map<String, dynamic> && _isTaskObject(parsed[0])) {
-            for (final item in parsed) {
-              if (item is Map<String, dynamic>) {
-                allTasks.add(TaskSuggestion(
-                  taskName: item['任务名称'] ?? item['taskName'] ?? '未命名任务',
-                  taskDescription: item['任务描述'] ?? item['taskDescription'] ?? '',
-                  taskAmount: item['任务金额'] ?? item['taskAmount'] ?? '',
-                  expectedCompletionTime: _cleanTime(item['预计完成时间'] ?? item['expectedCompletionTime'] ?? ''),
-                ));
-              }
-            }
-          }
-        }
-      } catch (e) {
-        // 减少错误日志输出
-      }
-    }
-    
-    debugPrint('===> 片段收集完成: 目标${allGoals.length}个, 子目标${allSubGoals.length}个, 任务${allTasks.length}个');
-    
-    // 如果找到了任何内容，创建建议集合
-    if (allGoals.isNotEmpty || allSubGoals.isNotEmpty || allTasks.isNotEmpty) {
+    if (goals.isNotEmpty || subGoals.isNotEmpty || tasks.isNotEmpty) {
       // 生成唯一ID
-      final id = _generateUniqueId(allGoals, allSubGoals, allTasks);
+      final id = _generateUniqueId(goals, subGoals, tasks);
       
       return [GoalSuggestionSet(
         id: id,
-        goals: allGoals,
-        subGoals: allSubGoals,
-        tasks: allTasks,
+        goals: goals,
+        subGoals: subGoals,
+        tasks: tasks,
       )];
     }
     
     return [];
   }
 
-  /// 检查是否是目标对象
-  static bool _isGoalObject(Map<String, dynamic> data) {
-    return data.containsKey('目标名称') || data.containsKey('goalName');
+  /// 直接提取目标信息
+  static List<GoalSuggestion> _extractGoalsDirectly(String content) {
+    final List<GoalSuggestion> goals = [];
+    
+    // 使用正则表达式查找所有目标名称
+    final RegExp goalPattern = RegExp(r'"目标名称"\s*:\s*"([^"]+)"');
+    final matches = goalPattern.allMatches(content);
+    
+    debugPrint('===> 目标提取: 正则匹配到${matches.length}个目标名称');
+    
+    for (final match in matches) {
+      final goalName = match.group(1) ?? '';
+      debugPrint('===> 找到目标名称: $goalName');
+      
+      // 找到这个目标名称后面的相关信息
+      final startIndex = match.start;
+      final endIndex = _findNextGoalEnd(content, startIndex);
+      final goalBlock = content.substring(startIndex, endIndex);
+      
+      debugPrint('===> 目标数据块长度: ${goalBlock.length}');
+      debugPrint('===> 目标数据块内容: ${goalBlock.substring(0, min(200, goalBlock.length))}...');
+      
+      // 提取各个字段
+      final description = _extractField(goalBlock, r'"目标描述"\s*:\s*"([^"]+)"');
+      final priority = _extractField(goalBlock, r'"优先级"\s*:\s*"([^"]+)"');
+      final targetAmount = _extractField(goalBlock, r'"目标金额"\s*:\s*"([^"]+)"');
+      final completionTime = _extractField(goalBlock, r'"预计完成时间"\s*:\s*"([^"]+)"');
+      
+      debugPrint('===> 提取字段: 描述="$description", 优先级="$priority", 金额="$targetAmount", 时间="$completionTime"');
+      
+      goals.add(GoalSuggestion(
+        goalName: goalName,
+        goalDescription: description,
+        priority: priority,
+        targetAmount: targetAmount,
+        expectedCompletionTime: _cleanTime(completionTime),
+      ));
+      
+      debugPrint('提取到目标: $goalName');
+    }
+    
+    return goals;
   }
 
-  /// 检查是否是子目标对象
-  static bool _isSubGoalObject(Map<String, dynamic> data) {
-    return data.containsKey('子目标名称') || data.containsKey('subGoalName');
+  /// 直接提取子目标信息
+  static List<SubGoalSuggestion> _extractSubGoalsDirectly(String content) {
+    final List<SubGoalSuggestion> subGoals = [];
+    
+    // 使用正则表达式查找所有子目标名称
+    final RegExp subGoalPattern = RegExp(r'"子目标名称"\s*:\s*"([^"]+)"');
+    final matches = subGoalPattern.allMatches(content);
+    
+    debugPrint('===> 子目标提取: 正则匹配到${matches.length}个子目标名称');
+    
+    for (final match in matches) {
+      final subGoalName = match.group(1) ?? '';
+      debugPrint('===> 找到子目标名称: $subGoalName');
+      
+      // 找到这个子目标名称后面的相关信息
+      final startIndex = match.start;
+      final endIndex = _findNextGoalEnd(content, startIndex);
+      final subGoalBlock = content.substring(startIndex, endIndex);
+      
+      // 提取各个字段
+      final description = _extractField(subGoalBlock, r'"子目标描述"\s*:\s*"([^"]+)"');
+      final amount = _extractField(subGoalBlock, r'"子目标金额"\s*:\s*"([^"]+)"');
+      final completionTime = _extractField(subGoalBlock, r'"预计完成时间"\s*:\s*"([^"]+)"');
+      
+      subGoals.add(SubGoalSuggestion(
+        subGoalName: subGoalName,
+        subGoalDescription: description,
+        subGoalAmount: amount,
+        expectedCompletionTime: _cleanTime(completionTime),
+      ));
+      
+      debugPrint('提取到子目标: $subGoalName');
+    }
+    
+    return subGoals;
   }
 
-  /// 检查是否是任务对象
-  static bool _isTaskObject(Map<String, dynamic> data) {
-    return data.containsKey('任务名称') || data.containsKey('taskName');
+  /// 直接提取任务信息
+  static List<TaskSuggestion> _extractTasksDirectly(String content) {
+    final List<TaskSuggestion> tasks = [];
+    
+    // 使用正则表达式查找所有任务名称
+    final RegExp taskPattern = RegExp(r'"任务名称"\s*:\s*"([^"]+)"');
+    final matches = taskPattern.allMatches(content);
+    
+    debugPrint('===> 任务提取: 正则匹配到${matches.length}个任务名称');
+    
+    for (final match in matches) {
+      final taskName = match.group(1) ?? '';
+      debugPrint('===> 找到任务名称: $taskName');
+      
+      // 找到这个任务名称后面的相关信息
+      final startIndex = match.start;
+      final endIndex = _findNextGoalEnd(content, startIndex);
+      final taskBlock = content.substring(startIndex, endIndex);
+      
+      // 提取各个字段
+      final description = _extractField(taskBlock, r'"任务描述"\s*:\s*"([^"]+)"');
+      final amount = _extractField(taskBlock, r'"任务金额"\s*:\s*"([^"]+)"');
+      final completionTime = _extractField(taskBlock, r'"预计完成时间"\s*:\s*"([^"]+)"');
+      
+      tasks.add(TaskSuggestion(
+        taskName: taskName,
+        taskDescription: description,
+        taskAmount: amount,
+        expectedCompletionTime: _cleanTime(completionTime),
+      ));
+      
+      debugPrint('提取到任务: $taskName');
+    }
+    
+    return tasks;
   }
 
-  /// 修复JSON格式 - 强化版本
-  static String _fixJsonFormat(String jsonStr) {
-    debugPrint('开始修复JSON格式');
-    String fixed = jsonStr;
-    
-    debugPrint('修复前: ${fixed.substring(0, min(200, fixed.length))}...');
-    
-    // 核心修复：处理 "目标 [" 格式错误
-    int fixCount = 0;
-    String oldFixed = fixed;
-    
-    // 修复各种可能的格式错误
-    fixed = fixed.replaceAll(RegExp(r'"目标\s*\['), '"目标": [');
-    if (fixed != oldFixed) {
-      fixCount++;
-      debugPrint('修复了目标字段格式错误');
-    }
-    
-    oldFixed = fixed;
-    fixed = fixed.replaceAll(RegExp(r'"子目标\s*\['), '"子目标": [');
-    if (fixed != oldFixed) {
-      fixCount++;
-      debugPrint('修复了子目标字段格式错误');
-    }
-    
-    oldFixed = fixed;
-    fixed = fixed.replaceAll(RegExp(r'"任务\s*\['), '"任务": [');
-    if (fixed != oldFixed) {
-      fixCount++;
-      debugPrint('修复了任务字段格式错误');
-    }
-    
-    // 处理更复杂的格式错误
-    oldFixed = fixed;
-    fixed = fixed.replaceAll(RegExp(r'"(目标|子目标|任务)\s+(\[)'), '"\\1": \\2');
-    if (fixed != oldFixed) {
-      fixCount++;
-      debugPrint('修复了复杂的字段格式错误');
-    }
-    
-    // 处理字段后面直接跟着对象的情况
-    oldFixed = fixed;
-    fixed = fixed.replaceAll(RegExp(r'"(目标|子目标|任务)"\s*\{'), '"\\1": {');
-    if (fixed != oldFixed) {
-      fixCount++;
-      debugPrint('修复了字段后直接跟对象的格式错误');
-    }
-    
-    // 处理缺少冒号的情况
-    oldFixed = fixed;
-    fixed = fixed.replaceAll(RegExp(r'"(目标|子目标|任务)"\s*([^\s:])'), '"\\1": \\2');
-    if (fixed != oldFixed) {
-      fixCount++;
-      debugPrint('修复了缺少冒号的格式错误');
-    }
-    
-    // 修复多余的空格和换行
-    fixed = fixed.replaceAll(RegExp(r'\s*}\s*]'), '}]');
-    fixed = fixed.replaceAll(RegExp(r'\s*,\s*]'), ']');
-    fixed = fixed.replaceAll(RegExp(r'\s*,\s*}'), '}');
-    fixed = fixed.replaceAll(RegExp(r'\[\s*\]'), '[]');
-    fixed = fixed.replaceAll(RegExp(r'\{\s*\}'), '{}');
-    
-    // 确保JSON的基本结构正确
-    if (!fixed.startsWith('{')) {
-      fixed = '{' + fixed;
-      fixCount++;
-      debugPrint('添加了开头的大括号');
-    }
-    
-    if (!fixed.endsWith('}')) {
-      fixed = fixed + '}';
-      fixCount++;
-      debugPrint('添加了结尾的大括号');
-    }
-    
-    debugPrint('总共进行了${fixCount}个修复');
-    debugPrint('修复后: ${fixed.substring(0, min(300, fixed.length))}...');
-    
-    return fixed;
+  /// 提取单个字段的值
+  static String _extractField(String text, String pattern) {
+    final RegExp regex = RegExp(pattern);
+    final match = regex.firstMatch(text);
+    return match?.group(1) ?? '';
   }
 
-  /// 提取目标列表
-  static List<GoalSuggestion> _extractGoals(Map<String, dynamic> dataMap) {
-    final goalsData = dataMap['目标'] ?? dataMap['goals'];
-    if (goalsData is! List) return [];
+  /// 找到下一个目标/子目标/任务的结束位置
+  static int _findNextGoalEnd(String content, int startIndex) {
+    // 简单策略：找到下一个大括号结束或者下一个目标名称开始
+    final nextGoalStart = content.indexOf('"目标名称"', startIndex + 1);
+    final nextSubGoalStart = content.indexOf('"子目标名称"', startIndex + 1);
+    final nextTaskStart = content.indexOf('"任务名称"', startIndex + 1);
     
-    return goalsData
-        .where((item) => item is Map<String, dynamic>)
-        .map((item) => GoalSuggestion(
-          goalName: item['目标名称'] ?? item['goalName'] ?? '未命名目标',
-          goalDescription: item['目标描述'] ?? item['goalDescription'] ?? '',
-          priority: item['优先级'] ?? item['priority'] ?? '',
-          targetAmount: item['目标金额'] ?? item['targetAmount'] ?? '',
-          expectedCompletionTime: _cleanTime(item['预计完成时间'] ?? item['expectedCompletionTime'] ?? ''),
-        ))
-        .toList();
-  }
-
-  /// 提取子目标列表
-  static List<SubGoalSuggestion> _extractSubGoals(Map<String, dynamic> dataMap) {
-    final subGoalsData = dataMap['子目标'] ?? dataMap['subGoals'];
-    if (subGoalsData is! List) return [];
+    int nextStart = content.length;
+    if (nextGoalStart != -1) nextStart = min(nextStart, nextGoalStart);
+    if (nextSubGoalStart != -1) nextStart = min(nextStart, nextSubGoalStart);
+    if (nextTaskStart != -1) nextStart = min(nextStart, nextTaskStart);
     
-    return subGoalsData
-        .where((item) => item is Map<String, dynamic>)
-        .map((item) => SubGoalSuggestion(
-          subGoalName: item['子目标名称'] ?? item['subGoalName'] ?? '未命名子目标',
-          subGoalDescription: item['子目标描述'] ?? item['subGoalDescription'] ?? '',
-          subGoalAmount: item['子目标金额'] ?? item['subGoalAmount'] ?? '',
-          expectedCompletionTime: _cleanTime(item['预计完成时间'] ?? item['expectedCompletionTime'] ?? ''),
-        ))
-        .toList();
-  }
-
-  /// 提取任务列表
-  static List<TaskSuggestion> _extractTasks(Map<String, dynamic> dataMap) {
-    final tasksData = dataMap['任务'] ?? dataMap['tasks'];
-    if (tasksData is! List) return [];
+    // 往前找到最近的}或者使用剩余的内容
+    int endPos = min(nextStart, content.length);
+    final blockContent = content.substring(startIndex, endPos);
+    final lastBrace = blockContent.lastIndexOf('}');
     
-    return tasksData
-        .where((item) => item is Map<String, dynamic>)
-        .map((item) => TaskSuggestion(
-          taskName: item['任务名称'] ?? item['taskName'] ?? '未命名任务',
-          taskDescription: item['任务描述'] ?? item['taskDescription'] ?? '',
-          taskAmount: item['任务金额'] ?? item['taskAmount'] ?? '',
-          expectedCompletionTime: _cleanTime(item['预计完成时间'] ?? item['expectedCompletionTime'] ?? ''),
-        ))
-        .toList();
+    if (lastBrace != -1) {
+      return startIndex + lastBrace + 1;
+    }
+    
+    return endPos;
   }
 
   /// 清理时间字段，过滤无用内容

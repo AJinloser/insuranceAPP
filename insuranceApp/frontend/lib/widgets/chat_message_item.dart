@@ -163,174 +163,45 @@ class ChatMessageItem extends StatelessWidget {
         if (shouldParseJsonContent) {
           debugPrint('开始解析完整消息内容 (长度: ${answer.length})');
           
-          // 优先检测完整的JSON格式（如{"answer": {...}}）
-          bool foundCompleteJson = false;
-          
-          // 检测是否包含完整的JSON格式
-          if (answer.contains('{"answer":') || answer.contains('"目标"') || answer.contains('"子目标"') || answer.contains('"任务"')) {
-            debugPrint('检测到可能的完整JSON格式，直接处理');
-            
-            // 处理保险产品
-            if (settingsService.insuranceJsonDetectionEnabled) {
-              final products = InsuranceProduct.fromMarkdown(answer);
-              if (products.isNotEmpty) {
-                debugPrint('识别到${products.length}个保险产品');
-                additionalWidgets.add(
-                  InsuranceProductCardList(
-                    products: products,
-                    onProductSelected: onProductSelected,
-                  )
-                );
-                foundCompleteJson = true;
-              }
-            }
-            
-            // 处理目标建议
-            if (settingsService.goalJsonDetectionEnabled) {
-              final goalSuggestions = GoalSuggestionSet.fromMarkdown(answer);
-              if (goalSuggestions.isNotEmpty) {
-                debugPrint('识别到${goalSuggestions.length}个目标建议集合');
-                additionalWidgets.add(
-                  GoalSuggestionCardList(
-                    suggestionSets: goalSuggestions,
-                    onAccept: (suggestionSet) => _handleGoalSuggestionAccept(context, suggestionSet),
-                    onReject: (suggestionSet) => _handleGoalSuggestionReject(context, suggestionSet),
-                  )
-                );
-                foundCompleteJson = true;
-              }
+          // 处理目标建议 - 使用简化后的检测逻辑
+          if (settingsService.goalJsonDetectionEnabled) {
+            final goalSuggestions = GoalSuggestionSet.fromMarkdown(answer);
+            if (goalSuggestions.isNotEmpty) {
+              debugPrint('识别到${goalSuggestions.length}个目标建议集合');
+              additionalWidgets.add(
+                GoalSuggestionCardList(
+                  suggestionSets: goalSuggestions,
+                  onAccept: (suggestionSet) => _handleGoalSuggestionAccept(context, suggestionSet),
+                  onReject: (suggestionSet) => _handleGoalSuggestionReject(context, suggestionSet),
+                )
+              );
             }
           }
           
-          // 如果没有找到完整的JSON格式，才处理JSON代码块
-          if (!foundCompleteJson) {
-            debugPrint('未找到完整JSON格式，尝试处理JSON代码块');
-            
-            // 检测是否包含JSON代码块
-            final RegExp jsonBlockRegex = RegExp(r'```json\s*([\s\S]*?)\s*```');
-            final matches = jsonBlockRegex.allMatches(answer);
-            
-            if (matches.isNotEmpty) {
-              // 处理保险产品
-              if (settingsService.insuranceJsonDetectionEnabled) {
-                final products = InsuranceProduct.fromMarkdown(answer);
-                if (products.isNotEmpty) {
-                  debugPrint('识别到${products.length}个保险产品');
-                  additionalWidgets.add(
-                    InsuranceProductCardList(
-                      products: products,
-                      onProductSelected: onProductSelected,
-                    )
-                  );
-                }
-              }
-              
-              // 处理目标建议
-              if (settingsService.goalJsonDetectionEnabled) {
-                final goalSuggestions = GoalSuggestionSet.fromMarkdown(answer);
-                if (goalSuggestions.isNotEmpty) {
-                  debugPrint('识别到${goalSuggestions.length}个目标建议集合');
-                  additionalWidgets.add(
-                    GoalSuggestionCardList(
-                      suggestionSets: goalSuggestions,
-                      onAccept: (suggestionSet) => _handleGoalSuggestionAccept(context, suggestionSet),
-                      onReject: (suggestionSet) => _handleGoalSuggestionReject(context, suggestionSet),
-                    )
-                  );
-                }
-              }
-              
-              // 如果找到了内容，移除JSON代码块
-              if (additionalWidgets.isNotEmpty) {
-                for (final match in matches) {
-                  textContent = textContent.replaceRange(
-                    match.start, 
-                    match.end, 
-                    ''
-                  );
-                }
-                
-                // 移除多余的空行
-                textContent = textContent.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-              }
+          // 处理保险产品
+          if (settingsService.insuranceJsonDetectionEnabled) {
+            final products = InsuranceProduct.fromMarkdown(answer);
+            if (products.isNotEmpty) {
+              debugPrint('识别到${products.length}个保险产品');
+              additionalWidgets.add(
+                InsuranceProductCardList(
+                  products: products,
+                  onProductSelected: onProductSelected,
+                )
+              );
             }
           }
           
-          // 移除完整JSON格式的内容（如果找到了）
-          if (foundCompleteJson) {
+          // 如果找到了内容，清理文本中的JSON内容
+          if (additionalWidgets.isNotEmpty) {
             // 移除完整的JSON格式内容
-            textContent = textContent.replaceAll(RegExp(r'\{"answer":\s*\{.*?\}\}'), '');
+            textContent = textContent.replaceAll(RegExp(r'\{\s*"answer"\s*:\s*\{.*?\}\s*\}'), '');
             
             // 移除JSON代码块
             textContent = textContent.replaceAll(RegExp(r'```json\s*[\s\S]*?\s*```'), '');
             
             // 移除多余的空行
             textContent = textContent.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-          }
-          
-          // 如果没有找到标准的JSON代码块，尝试检测可能的非标准格式JSON
-          if (additionalWidgets.isEmpty) {
-            try {
-              final RegExp bracketContentRegex = RegExp(r'\[\s*\{[\s\S]*?\}\s*\]|\{\s*"[\s\S]*?\}\s*');
-              final bracketMatches = bracketContentRegex.allMatches(answer);
-              
-              if (bracketMatches.isNotEmpty) {
-                for (final match in bracketMatches) {
-                  final content = match.group(0)!;
-                  try {
-                    final dynamic parsed = json.decode(content);
-                    if (parsed != null) {
-                      // 构造带有JSON代码块的Markdown
-                      final jsonMarkdown = '```json\n$content\n```';
-                      
-                      // 检查保险产品
-                      if (settingsService.insuranceJsonDetectionEnabled) {
-                        final products = InsuranceProduct.fromMarkdown(jsonMarkdown);
-                        if (products.isNotEmpty) {
-                          debugPrint('成功解析出${products.length}个保险产品');
-                          additionalWidgets.add(
-                            InsuranceProductCardList(
-                              products: products,
-                              onProductSelected: onProductSelected,
-                            )
-                          );
-                        }
-                      }
-                      
-                      // 检查目标建议
-                      if (settingsService.goalJsonDetectionEnabled) {
-                        final goalSuggestions = GoalSuggestionSet.fromMarkdown(jsonMarkdown);
-                        if (goalSuggestions.isNotEmpty) {
-                          debugPrint('成功解析出${goalSuggestions.length}个目标建议集合');
-                          additionalWidgets.add(
-                            GoalSuggestionCardList(
-                              suggestionSets: goalSuggestions,
-                              onAccept: (suggestionSet) => _handleGoalSuggestionAccept(context, suggestionSet),
-                              onReject: (suggestionSet) => _handleGoalSuggestionReject(context, suggestionSet),
-                            )
-                          );
-                        }
-                      }
-                      
-                      if (additionalWidgets.isNotEmpty) {
-                        // 处理消息中的文本内容，移除JSON内容
-                        textContent = textContent.replaceRange(match.start, match.end, '');
-                        
-                        // 移除多余的空行
-                        textContent = textContent.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-                        break; // 找到一个就停止
-                      }
-                    }
-                  } catch (e) {
-                    // 减少不必要的错误日志
-                    // debugPrint('尝试解析可能的JSON内容失败: $e');
-                  }
-                }
-              }
-            } catch (e) {
-              // 减少不必要的错误日志
-              // debugPrint('检测非标准格式JSON时出错: $e');
-            }
           }
         }
         

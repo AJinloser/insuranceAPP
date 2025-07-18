@@ -9,7 +9,7 @@ class SettingsService extends ChangeNotifier {
   static const String _goalJsonDetectionKey = 'goal_json_detection_enabled';
   static const String _processedGoalSuggestionsKey = 'processed_goal_suggestions';
 
-  bool _insuranceJsonDetectionEnabled = true;
+  bool _insuranceJsonDetectionEnabled = false;
   bool _goalJsonDetectionEnabled = true;
   Set<String> _processedGoalSuggestions = <String>{};
 
@@ -26,7 +26,7 @@ class SettingsService extends ChangeNotifier {
   Future<void> loadSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _insuranceJsonDetectionEnabled = prefs.getBool(_insuranceJsonDetectionKey) ?? true;
+      _insuranceJsonDetectionEnabled = prefs.getBool(_insuranceJsonDetectionKey) ?? false;
       _goalJsonDetectionEnabled = prefs.getBool(_goalJsonDetectionKey) ?? true;
       
       // 加载已处理的目标建议
