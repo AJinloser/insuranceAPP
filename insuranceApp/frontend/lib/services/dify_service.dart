@@ -21,7 +21,7 @@ class DifyService {
   factory DifyService() => _instance;
   
   DifyService._internal() {
-    _baseUrl = dotenv.env['DIFY_API_BASE_URL'] ?? 'http://47.238.246.199/v1';
+    _baseUrl = dotenv.env['DIFY_API_BASE_URL'] ?? 'http://47.76.197.193/v1';
     _apiKey = dotenv.env['DIFY_API_KEY'] ?? '';
     
     _dio = Dio(
