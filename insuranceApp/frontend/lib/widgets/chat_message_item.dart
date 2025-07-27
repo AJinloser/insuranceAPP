@@ -8,6 +8,7 @@ import '../services/settings_service.dart';
 import '../services/goal_suggestion_service.dart';
 import '../widgets/insurance_product_card.dart';
 import '../widgets/goal_suggestion_card.dart';
+import '../widgets/custom_markdown_body.dart';
 import 'dart:convert';
 import 'dart:math' show min;
 
@@ -214,7 +215,7 @@ class ChatMessageItem extends StatelessWidget {
               if (textContent.trim().isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16.0),
-                  child: MarkdownBody(
+                  child: CustomMarkdownBody(
                     data: textContent,
                     selectable: true,
                     styleSheet: MarkdownStyleSheet(
@@ -243,7 +244,7 @@ class ChatMessageItem extends StatelessWidget {
         }
         
         // 默认渲染为Markdown
-        return MarkdownBody(
+        return CustomMarkdownBody(
           data: answer,
           selectable: true,
           styleSheet: MarkdownStyleSheet(
