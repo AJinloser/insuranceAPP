@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'insurance_search_page.dart';
 import 'user_insurance_list_page.dart';
+import 'quick_insurance_build_page.dart'; // Added import for QuickInsuranceBuildPage
 
 class InsurancePage extends StatelessWidget {
   const InsurancePage({Key? key}) : super(key: key);
@@ -242,6 +243,11 @@ class InsurancePage extends StatelessWidget {
         
         const SizedBox(height: 16),
         
+        // 快速构筑卡片
+        _buildQuickBuildCard(context),
+        
+        const SizedBox(height: 16),
+        
         // 我的保单卡片
         _buildMyInsuranceCard(context),
       ],
@@ -388,6 +394,161 @@ class InsurancePage extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.blue.shade800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 构建快速构筑卡片
+  Widget _buildQuickBuildCard(BuildContext context) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const QuickInsuranceBuildPage(),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              // 图标和标题
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade100,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      Icons.auto_awesome,
+                      color: Colors.green.shade700,
+                      size: 32,
+                    ),
+                  ),
+                  
+                  const SizedBox(width: 16),
+                  
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '快速构筑保险方案',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green.shade800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '基于您的个人信息智能推荐',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.green.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.green.shade600,
+                    size: 20,
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 20),
+              
+              // 功能介绍
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.green.shade700,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'AI分析：基于您的年龄、收入、风险偏好等信息',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.green.shade800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 8),
+                    
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.green.shade700,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '智能推荐：为您量身定制的保险产品组合',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.green.shade800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 8),
+                    
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.green.shade700,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '专业建议：专业的保险规划方案和购买建议',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.green.shade800,
                             ),
                           ),
                         ),
