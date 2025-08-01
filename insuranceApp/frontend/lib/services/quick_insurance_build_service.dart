@@ -95,109 +95,244 @@ class QuickInsuranceBuildService extends ChangeNotifier {
 
       List<InsuranceProductMatch> matches = [];
 
-      // 为每个产品名称在所有类型中搜索
+      // 为每个完整产品名称在所有类型中搜索
       for (final productName in productNames) {
+        debugPrint('搜索产品: $productName');
+        
         for (final productType in productTypes) {
           try {
-            // 搜索产品
+            // 使用完整产品名称搜索
             await _insuranceService.searchProducts(
               productType: productType,
               searchParams: {'product_name': productName},
             );
 
-            // 查找匹配的产品
+            // 查找精确匹配的产品
             final matchingProducts = _insuranceService.products.where((product) {
-              final pName = product.productName?.toLowerCase() ?? '';
-              final searchName = productName.toLowerCase();
-              return pName.contains(searchName) || searchName.contains(pName);
+              return _isExactProductMatch(product.productName ?? '', productName);
             }).toList();
+
+            debugPrint('在 $productType 中搜索 "$productName" 找到 ${matchingProducts.length} 个产品');
 
             // 添加匹配的产品
             for (final product in matchingProducts) {
-              matches.add(InsuranceProductMatch(
-                product: product,
-                productType: productType,
-                originalName: productName,
-              ));
+              // 避免重复添加
+              if (!matches.any((m) => m.product.productId == product.productId)) {
+                matches.add(InsuranceProductMatch(
+                  product: product,
+                  productType: productType,
+                  originalName: productName,
+                ));
+                debugPrint('添加匹配产品: ${product.productName}');
+              }
             }
 
-            // 限制结果数量
-            if (matches.length >= 5) break;
+            // 如果找到匹配，跳出当前产品类型的搜索
+            if (matchingProducts.isNotEmpty) break;
+            
           } catch (e) {
-            debugPrint('搜索产品 $productName 在 $productType 中失败: $e');
+            debugPrint('搜索产品 "$productName" 在 $productType 中失败: $e');
           }
         }
         
+        // 限制结果数量
         if (matches.length >= 5) break;
       }
 
       _recommendedProducts = matches.take(5).toList();
-      debugPrint('找到 ${_recommendedProducts.length} 个匹配的产品');
+      debugPrint('最终找到 ${_recommendedProducts.length} 个匹配的产品');
 
     } catch (e) {
       debugPrint('解析和搜索产品失败: $e');
     }
+  }
+  
+  /// 精确产品匹配判断
+  bool _isExactProductMatch(String dbProductName, String searchProductName) {
+    if (dbProductName.isEmpty || searchProductName.isEmpty) return false;
+    
+    // 去除空格和符号进行比较
+    final cleanDbName = _normalizeProductName(dbProductName);
+    final cleanSearchName = _normalizeProductName(searchProductName);
+    
+    // 完全匹配
+    if (cleanDbName == cleanSearchName) return true;
+    
+    // 包含关系匹配（任一方包含另一方）
+    if (cleanDbName.contains(cleanSearchName) || cleanSearchName.contains(cleanDbName)) {
+      return true;
+    }
+    
+    return false;
+  }
+  
+  /// 标准化产品名称用于匹配
+  String _normalizeProductName(String name) {
+    return name
+        .toLowerCase()
+        .replaceAll(RegExp(r'\s+'), '') // 移除所有空格
+        .replaceAll(RegExp(r'[–—\-]'), '') // 移除各种连字符
+        .replaceAll(RegExp(r'[·•]'), '') // 移除分隔符
+        .trim();
   }
 
   /// 从AI响应中提取保险产品名称
   List<String> _extractProductNames(String response) {
     final productNames = <String>[];
     
-    // 常见的保险产品关键词模式
-    final patterns = [
-      // 匹配表格中的产品名称（markdown格式）
-      RegExp(r'\|[^|]*([^|]+(?:保险|险|保)(?:产品)?)[^|]*\|', caseSensitive: false),
-      // 匹配列表中的产品名称
-      RegExp(r'[•\-\*]\s*(.+?(?:保险|险|保)(?:产品)?)', caseSensitive: false),
-      // 匹配带引号的产品名称
-      RegExp(r'["""](.+?(?:保险|险|保)(?:产品)?)["""]', caseSensitive: false),
-      // 匹配推荐或建议后的产品名称
-      RegExp(r'(?:推荐|建议|选择)\s*(.+?(?:保险|险|保)(?:产品)?)', caseSensitive: false),
-    ];
-
-    for (final pattern in patterns) {
-      final matches = pattern.allMatches(response);
-      for (final match in matches) {
-        if (match.groupCount > 0) {
-          final productName = match.group(1)?.trim();
-          if (productName != null && productName.isNotEmpty) {
-            // 清理产品名称
-            final cleanName = _cleanProductName(productName);
-            if (cleanName.isNotEmpty && !productNames.contains(cleanName)) {
-              productNames.add(cleanName);
-            }
+    // 专门从包含"产品名"列的表格中提取产品名称
+    final lines = response.split('\n');
+    int? productNameColumnIndex;
+    bool inTargetTable = false;
+    
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i].trim();
+      
+      // 跳过空行
+      if (line.isEmpty) continue;
+      
+      // 检查是否是表格行（包含|）
+      if (!line.contains('|')) {
+        // 不是表格行，重置状态
+        inTargetTable = false;
+        productNameColumnIndex = null;
+        continue;
+      }
+      
+      // 分割表格列
+      final columns = line.split('|').map((col) => col.trim()).toList();
+      
+      // 移除首尾空白列
+      while (columns.isNotEmpty && columns.first.isEmpty) {
+        columns.removeAt(0);
+      }
+      while (columns.isNotEmpty && columns.last.isEmpty) {
+        columns.removeLast();
+      }
+      
+      // 检查是否是包含"产品名"的表头行
+      if (columns.any((col) => col.contains('产品名'))) {
+        productNameColumnIndex = columns.indexWhere((col) => col.contains('产品名'));
+        inTargetTable = true;
+        debugPrint('找到产品名列，位置: $productNameColumnIndex');
+        continue;
+      }
+      
+      // 检查是否是分隔线（包含---）
+      if (line.contains('---') || line.contains('--')) {
+        continue;
+      }
+      
+      // 如果在目标表格中且有产品名列索引，提取对应列的内容
+      if (inTargetTable && productNameColumnIndex != null && productNameColumnIndex < columns.length) {
+        final cellContent = columns[productNameColumnIndex].trim();
+        
+        if (cellContent.isNotEmpty && 
+            cellContent != '产品名' && // 排除表头
+            !cellContent.contains('---') && // 排除分隔线
+            (cellContent.contains('保') || cellContent.contains('险'))) {
+          final cleanName = _cleanProductName(cellContent);
+          if (cleanName.isNotEmpty && !productNames.contains(cleanName)) {
+            productNames.add(cleanName);
+            debugPrint('从产品名列提取到产品: $cleanName');
           }
         }
       }
     }
 
-    // 如果没有找到产品名称，尝试更宽泛的匹配
+    // 如果没有从产品名列提取到内容，使用备用方法
     if (productNames.isEmpty) {
-      final fallbackPattern = RegExp(r'([^，。！？\n]{2,15}(?:保险|险|保))', caseSensitive: false);
-      final matches = fallbackPattern.allMatches(response);
+      debugPrint('未从产品名列找到产品，使用备用提取方法');
+      _extractFromQuotesAndStructures(response, productNames);
+    }
+    
+    debugPrint('最终提取到的产品名称: $productNames');
+    return productNames.take(10).toList(); // 限制数量
+  }
+  
+  /// 从引号和结构化文本中提取产品名称（备用方法）
+  void _extractFromQuotesAndStructures(String response, List<String> productNames) {
+    // 从引号中提取产品名称（中文引号、书名号、英文引号）
+    final quotePatterns = [
+      RegExp(r'「([^」]+(?:保险|险|保))」', caseSensitive: false), // 「产品名」
+      RegExp(r'《([^》]+(?:保险|险|保))》', caseSensitive: false), // 《产品名》
+      RegExp(r'"([^"]+(?:保险|险|保))"', caseSensitive: false),   // "产品名"
+      RegExp(r'『([^』]+(?:保险|险|保))』', caseSensitive: false), // 『产品名』
+    ];
+    
+    for (final pattern in quotePatterns) {
+      final matches = pattern.allMatches(response);
       for (final match in matches) {
         final productName = match.group(1)?.trim();
         if (productName != null && productName.isNotEmpty) {
           final cleanName = _cleanProductName(productName);
           if (cleanName.isNotEmpty && !productNames.contains(cleanName)) {
             productNames.add(cleanName);
+            debugPrint('引号提取到产品: $cleanName');
           }
         }
       }
     }
-
-    return productNames.take(10).toList(); // 限制数量
+    
+    // 从结构化文本中提取（最优推荐、可投保产品等）
+    final structuredPatterns = [
+      RegExp(r'最优推荐[：:]\s*([^，。\n]+(?:保险|险|保))', caseSensitive: false),
+      RegExp(r'可投保产品[：:]\s*([^，。\n]+(?:保险|险|保))', caseSensitive: false),
+      RegExp(r'推荐产品[：:]\s*([^，。\n]+(?:保险|险|保))', caseSensitive: false),
+    ];
+    
+    for (final pattern in structuredPatterns) {
+      final matches = pattern.allMatches(response);
+      for (final match in matches) {
+        final productName = match.group(1)?.trim();
+        if (productName != null && productName.isNotEmpty) {
+          final cleanName = _cleanProductName(productName);
+          if (cleanName.isNotEmpty && !productNames.contains(cleanName)) {
+            productNames.add(cleanName);
+            debugPrint('结构化提取到产品: $cleanName');
+          }
+        }
+      }
+    }
   }
 
   /// 清理产品名称
   String _cleanProductName(String name) {
-    // 移除常见的前缀和后缀
-    final cleanName = name
+    // 移除常见的前缀和后缀，但保留产品名称中的重要信息
+    String cleanName = name
         .replaceAll(RegExp(r'^[•\-\*\s]+'), '') // 移除开头的列表符号
-        .replaceAll(RegExp(r'[：:]\s*'), '') // 移除冒号
-        .replaceAll(RegExp(r'\s*[（(].*?[）)]\s*'), '') // 移除括号内容
+        .replaceAll(RegExp(r'^[：:]\s*'), '') // 移除开头的冒号
         .replaceAll(RegExp(r'[|｜]'), '') // 移除表格分隔符
         .trim();
+    
+    // 移除公司名称前缀（如果存在）
+    final companyPrefixes = ['众安保险', '平安健康', '平安财险', '人保财险', '太平洋保险', '中国人寿', '新华保险', '泰康保险'];
+    for (final prefix in companyPrefixes) {
+      if (cleanName.startsWith(prefix)) {
+        cleanName = cleanName.substring(prefix.length).trim();
+        break;
+      }
+    }
+    
+    // 移除一些无用的词汇，但保留括号内容（因为可能是产品版本信息）
+    cleanName = cleanName
+        .replaceAll(RegExp(r'^(产品|保险产品)[：:]?\s*'), '') // 移除"产品："前缀
+        .replaceAll(RegExp(r'\s+(产品|保险)$'), '') // 移除末尾的"产品"
+        .trim();
+    
+    // 如果名称太短或包含无意义内容，则过滤掉
+    if (cleanName.length < 3 || 
+        cleanName.length > 50 ||
+        cleanName.contains('可投保') ||
+        cleanName.contains('适配性') ||
+        cleanName.contains('判断') ||
+        cleanName.contains('用户') ||
+        cleanName.contains('适合') ||
+        cleanName.startsWith('**') ||
+        cleanName.contains('款可以') ||
+        RegExp(r'^\d+\s*\*').hasMatch(cleanName)) {
+      return '';
+    }
     
     return cleanName;
   }
