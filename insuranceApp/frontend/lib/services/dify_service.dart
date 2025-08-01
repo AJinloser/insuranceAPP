@@ -28,7 +28,7 @@ class DifyService {
       BaseOptions(
         baseUrl: _baseUrl,
         connectTimeout: const Duration(seconds: 30),
-        receiveTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 120), // 增加到120秒
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',

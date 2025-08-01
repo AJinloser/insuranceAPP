@@ -39,8 +39,9 @@ RUN flutter clean && \
 # 构建Web应用
 RUN flutter build web --release
 
-# 修复serviceWorkerVersion
-RUN sed -i 's/var serviceWorkerVersion = "{{flutter_service_worker_version}}"/var serviceWorkerVersion = null/g' build/web/index.html
+# 添加时间戳避免缓存 - 使用构建时间
+RUN BUILD_TIME=$(date +%s) && \
+    sed -i "s/var serviceWorkerVersion = \"{{flutter_service_worker_version}}\"/var serviceWorkerVersion = \"${BUILD_TIME}\"/g" build/web/index.html
 
 # 使用nginx镜像部署
 FROM nginx:stable-alpine

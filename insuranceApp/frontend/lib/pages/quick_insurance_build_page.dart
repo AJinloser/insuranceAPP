@@ -470,7 +470,7 @@ class _QuickInsuranceBuildPageState extends State<QuickInsuranceBuildPage> {
         const SizedBox(height: 12),
         
         Text(
-          '根据您的个人信息，我们为您筛选出以下优质保险产品：',
+          '根据您的个人信息，我们还为您筛选出以下优质保险产品：',
           style: TextStyle(
             fontSize: 14,
             color: Colors.grey[600],

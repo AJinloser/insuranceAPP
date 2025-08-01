@@ -58,7 +58,7 @@ class InsurancePage extends StatelessWidget {
               Theme.of(context).primaryColor,
               Theme.of(context).primaryColor.withValues(alpha: 0.8),
             ],
-          ),
+        ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,19 +111,19 @@ class InsurancePage extends StatelessWidget {
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.grey[800],
-          ),
+        ),
         ),
         
         const SizedBox(height: 16),
         
         // 功能介绍列表
         _buildFeatureListItem(
-          context,
+        context,
           icon: Icons.search,
           title: '智能搜索',
           description: '按类型搜索保险产品，支持多条件筛选和对比',
           color: Colors.blue,
-        ),
+          ),
         
         const SizedBox(height: 12),
         
@@ -153,7 +153,7 @@ class InsurancePage extends StatelessWidget {
           title: 'AI咨询',
           description: '与AI助手对话，获取个性化保险建议',
           color: Colors.purple,
-        ),
+                    ),
       ],
     );
   }
@@ -182,13 +182,13 @@ class InsurancePage extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
             child: Icon(
               icon,
               color: color,
               size: 24,
-            ),
+              ),
           ),
           
           const SizedBox(width: 16),
@@ -196,15 +196,15 @@ class InsurancePage extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+            children: [
                 Text(
                   title,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.grey[800],
-                  ),
                 ),
+              ),
                 const SizedBox(height: 4),
                 Text(
                   description,
@@ -215,7 +215,7 @@ class InsurancePage extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
+              ),
           ),
         ],
       ),
@@ -226,15 +226,15 @@ class InsurancePage extends StatelessWidget {
   Widget _buildMainFeatureCards(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
+          children: [
+            Text(
           '选择您需要的服务',
-          style: TextStyle(
+              style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.grey[800],
-          ),
-        ),
+              ),
+            ),
         
         const SizedBox(height: 16),
         
@@ -294,9 +294,9 @@ class InsurancePage extends StatelessWidget {
                   const SizedBox(width: 16),
                   
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
                         Text(
                           '搜索保险产品',
                           style: TextStyle(
@@ -336,48 +336,48 @@ class InsurancePage extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    Row(
-                      children: [
-                        Icon(
+            Row(
+              children: [
+                Icon(
                           Icons.check_circle_outline,
                           color: Colors.blue.shade700,
                           size: 16,
-                        ),
-                        const SizedBox(width: 8),
+                ),
+                const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             '按类型浏览：定期寿险、重疾险、医疗险等',
-                            style: TextStyle(
+                  style: TextStyle(
                               fontSize: 13,
                               color: Colors.blue.shade800,
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    
+                  ),
+                ),
+              ],
+            ),
+            
                     const SizedBox(height: 8),
-                    
-                    Row(
-                      children: [
+            
+            Row(
+              children: [
                         Icon(
                           Icons.check_circle_outline,
                           color: Colors.blue.shade700,
                           size: 16,
                         ),
                         const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
+                Expanded(
+                  child: Text(
                             '多条件筛选：保费、保额、公司等',
-                            style: TextStyle(
+                    style: TextStyle(
                               fontSize: 13,
                               color: Colors.blue.shade800,
-                            ),
-                          ),
-                        ),
-                      ],
                     ),
-                    
+                  ),
+                ),
+              ],
+            ),
+            
                     const SizedBox(height: 8),
                     
                     Row(
@@ -386,18 +386,18 @@ class InsurancePage extends StatelessWidget {
                           Icons.check_circle_outline,
                           color: Colors.blue.shade700,
                           size: 16,
-                        ),
+                  ),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(
+                child: Text(
                             '产品对比：最多同时对比2个产品',
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.blue.shade800,
-                            ),
-                          ),
-                        ),
-                      ],
+                ),
+              ),
+            ),
+          ],
                     ),
                   ],
                 ),
@@ -423,7 +423,7 @@ class InsurancePage extends StatelessWidget {
             MaterialPageRoute(
               builder: (context) => const QuickInsuranceBuildPage(),
             ),
-          );
+    );
         },
         borderRadius: BorderRadius.circular(16),
         child: Container(
@@ -450,28 +450,28 @@ class InsurancePage extends StatelessWidget {
                   
                   Expanded(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
                           '快速构筑保险方案',
                           style: TextStyle(
                             fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.bold,
                             color: Colors.green.shade800,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
                           '基于您的个人信息智能推荐',
-                          style: TextStyle(
+                style: TextStyle(
                             fontSize: 14,
                             color: Colors.green.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  
+                ),
+              ),
+            ],
+          ),
+        ),
+        
                   Icon(
                     Icons.arrow_forward_ios,
                     color: Colors.green.shade600,
@@ -485,10 +485,10 @@ class InsurancePage extends StatelessWidget {
               // 功能介绍
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
+              decoration: BoxDecoration(
                   color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
                 child: Column(
                   children: [
                     Row(
@@ -496,7 +496,7 @@ class InsurancePage extends StatelessWidget {
                         Icon(
                           Icons.check_circle_outline,
                           color: Colors.green.shade700,
-                          size: 16,
+                size: 16,
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -505,10 +505,10 @@ class InsurancePage extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.green.shade800,
-                            ),
-                          ),
-                        ),
-                      ],
+            ),
+          ),
+        ),
+      ],
                     ),
                     
                     const SizedBox(height: 8),
@@ -536,28 +536,28 @@ class InsurancePage extends StatelessWidget {
                     const SizedBox(height: 8),
                     
                     Row(
-                      children: [
-                        Icon(
+        children: [
+          Icon(
                           Icons.check_circle_outline,
                           color: Colors.green.shade700,
                           size: 16,
-                        ),
+          ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             '专业建议：专业的保险规划方案和购买建议',
-                            style: TextStyle(
+            style: TextStyle(
                               fontSize: 13,
                               color: Colors.green.shade800,
                             ),
                           ),
                         ),
                       ],
-                    ),
+            ),
                   ],
                 ),
-              ),
-            ],
+          ),
+        ],
           ),
         ),
       ),
@@ -588,59 +588,59 @@ class InsurancePage extends StatelessWidget {
               // 图标和标题
               Row(
                 children: [
-                  Container(
+              Container(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
+                decoration: BoxDecoration(
                       color: Colors.purple.shade100,
                       borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(
-                      Icons.assignment,
-                      color: Colors.purple.shade700,
+                ),
+                child: Icon(
+                  Icons.assignment,
+                  color: Colors.purple.shade700,
                       size: 32,
-                    ),
-                  ),
-                  
-                  const SizedBox(width: 16),
-                  
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '我的保单',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.purple.shade800,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '管理您已添加的保险产品',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.purple.shade600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  Icon(
-                    Icons.arrow_forward_ios,
-                    color: Colors.purple.shade600,
-                    size: 20,
-                  ),
-                ],
+                ),
               ),
               
-              const SizedBox(height: 20),
+              const SizedBox(width: 16),
               
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '我的保单',
+                      style: TextStyle(
+                            fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple.shade800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                          '管理您已添加的保险产品',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.purple.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.purple.shade600,
+                    size: 20,
+              ),
+            ],
+          ),
+              
+              const SizedBox(height: 20),
+          
               // 功能介绍
-              Container(
+          Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
+            decoration: BoxDecoration(
                   color: Colors.purple.shade50,
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -652,24 +652,24 @@ class InsurancePage extends StatelessWidget {
                           Icons.check_circle_outline,
                           color: Colors.purple.shade700,
                           size: 16,
-                        ),
+            ),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(
+            child: Text(
                             '查看保单详情：查看已添加的保险产品信息',
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.purple.shade800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+              ),
+            ),
+          ),
+        ],
+      ),
                     
                     const SizedBox(height: 8),
                     
-                    Row(
-                      children: [
+            Row(
+              children: [
                         Icon(
                           Icons.check_circle_outline,
                           color: Colors.purple.shade700,
@@ -679,17 +679,17 @@ class InsurancePage extends StatelessWidget {
                         Expanded(
                           child: Text(
                             '保单管理：删除不需要的保险产品',
-                            style: TextStyle(
+                  style: TextStyle(
                               fontSize: 13,
                               color: Colors.purple.shade800,
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    
+                ),
+                ),
+              ],
+            ),
+            
                     const SizedBox(height: 8),
-                    
+            
                     Row(
                       children: [
                         Icon(
@@ -698,21 +698,21 @@ class InsurancePage extends StatelessWidget {
                           size: 16,
                         ),
                         const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
+            Expanded(
+                    child: Text(
                             'AI分析：获取个性化的保单分析建议',
-                            style: TextStyle(
+                      style: TextStyle(
                               fontSize: 13,
                               color: Colors.purple.shade800,
-                            ),
-                          ),
+                      ),
+                    ),
                         ),
                       ],
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
+          ],
           ),
         ),
       ),
