@@ -74,8 +74,8 @@ class ChatMessageItem extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (isUserMessage) ...[
-                        // 用户消息
-                        Text(
+                        // 用户消息 - 使用SelectableText支持选择和复制
+                        SelectableText(
                           message.query!,
                           style: const TextStyle(
                             fontSize: 16,
