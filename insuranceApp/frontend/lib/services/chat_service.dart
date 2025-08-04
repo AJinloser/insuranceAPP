@@ -39,6 +39,10 @@ class ChatService with ChangeNotifier {
   String _currentAnswer = '';
   bool _isInitialized = false;
   
+  // 新增：流订阅管理
+  StreamSubscription<dynamic>? _currentStreamSubscription;
+  bool _isStreamCancelled = false;
+  
   // Getters
   List<AIModule> get aiModules => _aiModules;
   AIModule? get selectedModule => _selectedModule;
@@ -400,6 +404,7 @@ class ChatService with ChangeNotifier {
     try {
       _isSending = true;
       _currentAnswer = ''; // 清空之前的累积回复
+      _isStreamCancelled = false; // 重置取消标志
       notifyListeners();
 
       // 创建临时ID以更好地标识消息
@@ -438,11 +443,17 @@ class ChatService with ChangeNotifier {
       debugPrint('===> 聊天API KEY: ${selectedModule!.apiKey.substring(0, 5)}...');
 
       // 使用StreamService发送流式请求
-      final streamSubscription = _streamService.createSSERequest(
+      _currentStreamSubscription = _streamService.createSSERequest(
         endpoint: 'chat-messages',
         apiKey: selectedModule!.apiKey,
         body: requestBody,
         onMessage: (response) {
+          // 检查是否已被取消
+          if (_isStreamCancelled) {
+            debugPrint('===> 流已被取消，忽略消息响应');
+            return;
+          }
+          
           if (response is MessageResponse) {
             // 更新任务ID
             _currentTaskId = response.taskId;
@@ -477,6 +488,12 @@ class ChatService with ChangeNotifier {
           }
         },
         onMessageEnd: (response) {
+          // 检查是否已被取消
+          if (_isStreamCancelled) {
+            debugPrint('===> 流已被取消，忽略消息结束响应');
+            return;
+          }
+          
           debugPrint('===> 消息结束: ${response.messageId}');
           
           // 更新最终消息
@@ -515,6 +532,12 @@ class ChatService with ChangeNotifier {
           }
         },
         onError: (errorResponse) {
+          // 检查是否已被取消
+          if (_isStreamCancelled) {
+            debugPrint('===> 流已被取消，忽略错误响应');
+            return;
+          }
+          
           debugPrint('===> 流错误: ${errorResponse.message}');
           
           // 更新临时消息为错误信息
@@ -533,27 +556,39 @@ class ChatService with ChangeNotifier {
         // 流事件已在各个回调中处理
       });
 
-      // 等待流处理完成
-      await streamSubscription.asFuture();
-      await streamSubscription.cancel();
-
+      // 等待流处理完成或被取消
+      await _currentStreamSubscription!.asFuture().catchError((error) {
+        if (!_isStreamCancelled) {
+          debugPrint('流处理出错: $error');
+          return Future.error(error);
+        }
+        return Future.value();
+      });
+      
     } catch (e) {
       debugPrint('发送消息错误: $e');
       
-      // 确保在错误情况下也更新UI
-      final index = _messages.indexWhere((msg) => msg.id.startsWith('temp_ai_'));
-      if (index != -1) {
-        _messages[index] = ChatMessage(
-          id: _messages[index].id,
-          conversationId: _messages[index].conversationId,
-          answer: '发送消息时出错: $e',
-          createdAt: _messages[index].createdAt,
-        );
-        notifyListeners();
+      // 确保在错误情况下也更新UI（如果没有被取消）
+      if (!_isStreamCancelled) {
+        final index = _messages.indexWhere((msg) => msg.id.startsWith('temp_ai_'));
+        if (index != -1) {
+          _messages[index] = ChatMessage(
+            id: _messages[index].id,
+            conversationId: _messages[index].conversationId,
+            answer: '发送消息时出错: $e',
+            createdAt: _messages[index].createdAt,
+          );
+          notifyListeners();
+        }
       }
       
-      rethrow;
+      // 如果没有被取消，重新抛出异常
+      if (!_isStreamCancelled) {
+        throw e;
+      }
     } finally {
+      // 清理订阅引用
+      _currentStreamSubscription = null;
       _isSending = false;
       notifyListeners();
     }
@@ -585,25 +620,52 @@ class ChatService with ChangeNotifier {
   
   /// 停止响应
   Future<void> stopResponse() async {
-    if (_currentTaskId == null || selectedModule == null) return;
-
-    try {
-      final result = await _streamService.stopResponse(
-        taskId: _currentTaskId!,
-        userId: _userId,
-        apiKey: selectedModule!.apiKey,
-      );
-      
-      if (result) {
-        debugPrint('===> 停止响应成功');
-      } else {
-        debugPrint('===> 停止响应失败');
+    debugPrint('===> 停止响应被调用');
+    
+    // 1. 立即设置取消标志，阻止后续响应处理
+    _isStreamCancelled = true;
+    
+    // 2. 取消当前流订阅（如果存在）
+    if (_currentStreamSubscription != null) {
+      try {
+        await _currentStreamSubscription!.cancel();
+        debugPrint('===> 流订阅已取消');
+      } catch (e) {
+        debugPrint('===> 取消流订阅时出错: $e');
+      } finally {
+        _currentStreamSubscription = null;
       }
-      
-      _currentTaskId = null;
-    } catch (e) {
-      debugPrint('停止响应出错: $e');
     }
+    
+    // 3. 如果有taskId，发送停止API请求并等待响应
+    if (_currentTaskId != null && selectedModule != null) {
+      try {
+        debugPrint('===> 正在发送停止API请求...');
+        final result = await _streamService.stopResponse(
+          taskId: _currentTaskId!,
+          userId: _userId,
+          apiKey: selectedModule!.apiKey,
+        );
+        
+        if (result) {
+          debugPrint('===> 停止API请求成功');
+        } else {
+          debugPrint('===> 停止API请求失败');
+        }
+        
+        _currentTaskId = null;
+      } catch (e) {
+        debugPrint('===> 停止API请求出错: $e');
+        // 即使API请求失败，也要清除taskId，避免状态不一致
+        _currentTaskId = null;
+      }
+    }
+    
+    // 4. 重置发送状态，允许用户重新发送消息
+    _isSending = false;
+    notifyListeners();
+    
+    debugPrint('===> 停止响应完成');
   }
   
   /// 消息反馈（点赞/点踩）
@@ -775,5 +837,29 @@ class ChatService with ChangeNotifier {
       return selectedModule!.parameters!.suggestedQuestions!;
     }
     return [];
+  }
+
+  /// 处理目标建议接受
+  Future<void> _handleGoalSuggestionAccept(Map<String, dynamic> suggestionData) async {
+    // TODO: 实现目标建议接受逻辑
+    debugPrint('接受目标建议: $suggestionData');
+  }
+
+  /// 处理目标建议拒绝
+  void _handleGoalSuggestionReject(Map<String, dynamic> suggestionData) {
+    // TODO: 实现目标建议拒绝逻辑
+    debugPrint('拒绝目标建议: $suggestionData');
+  }
+  
+  /// 清理资源
+  @override
+  void dispose() {
+    // 取消当前流订阅
+    if (_currentStreamSubscription != null) {
+      _currentStreamSubscription!.cancel();
+      _currentStreamSubscription = null;
+    }
+    
+    super.dispose();
   }
 } 

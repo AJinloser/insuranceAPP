@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../models/dify_models.dart';
@@ -481,24 +482,42 @@ class _ConversationPageState extends State<ConversationPage> {
             children: [
               // 输入框
               Expanded(
-                child: TextField(
-                  controller: _messageController,
-                  decoration: InputDecoration(
-                    hintText: '输入消息...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide.none,
+                child: Focus(
+                  onKeyEvent: (node, event) {
+                    // 检测Ctrl+Enter组合键
+                    if (event is KeyDownEvent &&
+                        event.logicalKey == LogicalKeyboardKey.enter &&
+                        (HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.controlLeft) ||
+                         HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.controlRight) ||
+                         HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.metaLeft) ||
+                         HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.metaRight))) {
+                      // Ctrl+Enter或Cmd+Enter发送消息
+                      _sendMessage();
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
+                  },
+                  child: TextField(
+                    controller: _messageController,
+                    maxLines: null, // 允许无限行
+                    minLines: 1, // 最小1行
+                    keyboardType: TextInputType.multiline, // 多行键盘类型
+                    decoration: InputDecoration(
+                      hintText: '输入消息... (Ctrl+Enter发送)',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.withAlpha(26),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
                     ),
-                    filled: true,
-                    fillColor: Colors.grey.withAlpha(26),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
+                    textInputAction: TextInputAction.newline, // 改为换行而不是发送
+                    enabled: !isSending,
                   ),
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => _sendMessage(),
-                  enabled: !isSending,
                 ),
               ),
               
