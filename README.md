@@ -25,6 +25,7 @@ insuranceApp/
 └── frontend/        # Flutter前端
     ├── lib/         # 应用代码
     │   ├── models/  # 数据模型
+    │   ├── pages/   # 页面
     │   ├── screens/ # 屏幕页面
     │   ├── services/# 服务
     │   ├── utils/   # 工具类
