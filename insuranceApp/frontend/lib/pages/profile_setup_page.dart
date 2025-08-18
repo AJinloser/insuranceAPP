@@ -39,6 +39,13 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   // 目标信息控制器
   final _goalDetailsController = TextEditingController();
 
+  // 保险信息状态变量
+  String? _hasMedicalInsurance; // 是否有社会医疗保险：是/否
+  String? _medicalInsuranceType; // 社会医疗保险类型：城镇职工/城乡居民/公费医疗
+  String? _hasEndowmentInsurance; // 是否有社会养老保险：是/否
+  String? _endowmentInsuranceType; // 社会养老保险类型：城镇职工/城乡居民
+  String? _hasBusinessInsurance; // 是否有商业保险：是/否
+
   // 模块信息配置
   final List<ModuleInfo> _modules = [
     ModuleInfo(
@@ -88,7 +95,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
 
   // 下一页
   void _nextPage() {
-    if (_currentPage < 4) { // 修改最大页面数
+    if (_currentPage < 5) { // 修改最大页面数为6页（索引0-5）
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
@@ -133,7 +140,11 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         ),
         riskInfo: RiskInfo(),
         retirementInfo: RetirementInfo(),
-        insuranceInfo: InsuranceInfo(),
+        insuranceInfo: InsuranceInfo(
+          socialMedicalInsurance: null,
+          socialEndowmentInsurance: null,
+          businessInsurance: null,
+        ),
         familyInfo: FamilyInfo(familyMembers: []),
         goalInfo: GoalInfo(goals: []),
         otherInfo: {},
@@ -154,7 +165,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         
         // 跳转到欢迎页面
         _pageController.animateToPage(
-          4, // 直接跳转到第5页（索引4）
+          5, // 直接跳转到第6页（索引5）
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
         );
@@ -196,6 +207,32 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     print('===> ProfileSetupPage: 目标详情内容: "${_goalDetailsController.text}"');
 
     try {
+      // 构建保险信息
+      String? medicalInsurance;
+      String? endowmentInsurance;
+      String? businessInsurance;
+
+      // 处理社会医疗保险
+      if (_hasMedicalInsurance == '否') {
+        medicalInsurance = '无';
+      } else if (_hasMedicalInsurance == '是' && _medicalInsuranceType != null) {
+        medicalInsurance = _medicalInsuranceType;
+      }
+
+      // 处理社会养老保险
+      if (_hasEndowmentInsurance == '否') {
+        endowmentInsurance = '无';
+      } else if (_hasEndowmentInsurance == '是' && _endowmentInsuranceType != null) {
+        endowmentInsurance = _endowmentInsuranceType;
+      }
+
+      // 处理商业保险
+      if (_hasBusinessInsurance == '否') {
+        businessInsurance = '无';
+      } else if (_hasBusinessInsurance == '是') {
+        businessInsurance = '有';
+      }
+
       // 构建UserInfo对象
       final userInfo = UserInfo(
         basicInfo: BasicInfo(
@@ -214,7 +251,11 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         ),
         riskInfo: RiskInfo(),
         retirementInfo: RetirementInfo(),
-        insuranceInfo: InsuranceInfo(),
+        insuranceInfo: InsuranceInfo(
+          socialMedicalInsurance: medicalInsurance,
+          socialEndowmentInsurance: endowmentInsurance,
+          businessInsurance: businessInsurance,
+        ),
         familyInfo: FamilyInfo(familyMembers: []),
         goalInfo: GoalInfo(
           goals: _goalDetailsController.text.isEmpty 
@@ -339,7 +380,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                         _buildBasicInfoPage(),
                         _buildFinancialInfoPage(),
                         _buildGoalInfoPage(),
-                        _buildWelcomePage(), // 添加新的欢迎页面
+                        _buildInsuranceInfoPage(), // 新增保险信息页面
+                        _buildWelcomePage(), // 欢迎页面移到最后
                       ],
                     ),
                   ),
@@ -359,7 +401,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   Widget _buildPageIndicator() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(5, (index) { // 修改页面数量为5
+      children: List.generate(6, (index) { // 修改页面数量为6
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 4),
           width: 12,
@@ -633,6 +675,153 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     );
   }
 
+  // 保险信息页面
+  Widget _buildInsuranceInfoPage() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '保险信息',
+            style: TextStyle(
+              fontSize: 24.0,
+              fontWeight: FontWeight.bold,
+              color: _primaryColor,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '请您提供一些您的保险信息，包括您目前拥有的社会医疗保险、社会养老保险和商业保险，这能帮助我们更好地了解您的保险状况，为您推荐合适的保险产品。',
+            style: TextStyle(
+              fontSize: 14.0,
+              color: Colors.grey[600],
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          // 社会医疗保险问题
+          _buildInsuranceQuestion(
+            '您是否参加了社会医疗保险？',
+            _hasMedicalInsurance,
+            (value) => setState(() {
+              _hasMedicalInsurance = value;
+              if (value == '否') _medicalInsuranceType = null;
+            }),
+          ),
+          
+          // 社会医疗保险类型追问
+          if (_hasMedicalInsurance == '是') ...[
+            const SizedBox(height: 16),
+            _buildInsuranceTypeQuestion(
+              '您的社会医疗保险类型是什么？',
+              _medicalInsuranceType,
+              ['城镇职工', '城乡居民', '公费医疗'],
+              (value) => setState(() => _medicalInsuranceType = value),
+            ),
+          ],
+          
+          const SizedBox(height: 24),
+          
+          // 社会养老保险问题
+          _buildInsuranceQuestion(
+            '您是否参加了社会养老保险？',
+            _hasEndowmentInsurance,
+            (value) => setState(() {
+              _hasEndowmentInsurance = value;
+              if (value == '否') _endowmentInsuranceType = null;
+            }),
+          ),
+          
+          // 社会养老保险类型追问
+          if (_hasEndowmentInsurance == '是') ...[
+            const SizedBox(height: 16),
+            _buildInsuranceTypeQuestion(
+              '您的社会养老保险类型是什么？',
+              _endowmentInsuranceType,
+              ['城镇职工', '城乡居民'],
+              (value) => setState(() => _endowmentInsuranceType = value),
+            ),
+          ],
+          
+          const SizedBox(height: 24),
+          
+          // 商业保险问题
+          _buildInsuranceQuestion(
+            '您是否购买了商业保险？',
+            _hasBusinessInsurance,
+            (value) => setState(() => _hasBusinessInsurance = value),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 构建保险是否问题的组件
+  Widget _buildInsuranceQuestion(String question, String? currentValue, Function(String?) onChanged) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          question,
+          style: TextStyle(
+            fontSize: 16.0,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: RadioListTile<String>(
+                title: const Text('是'),
+                value: '是',
+                groupValue: currentValue,
+                onChanged: onChanged,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+            Expanded(
+              child: RadioListTile<String>(
+                title: const Text('否'),
+                value: '否',
+                groupValue: currentValue,
+                onChanged: onChanged,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // 构建保险类型选择的组件
+  Widget _buildInsuranceTypeQuestion(String question, String? currentValue, List<String> options, Function(String?) onChanged) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          question,
+          style: TextStyle(
+            fontSize: 16.0,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...options.map((option) => RadioListTile<String>(
+          title: Text(option),
+          value: option,
+          groupValue: currentValue,
+          onChanged: onChanged,
+          visualDensity: VisualDensity.compact,
+        )).toList(),
+      ],
+    );
+  }
+
   // 欢迎页面
   Widget _buildWelcomePage() {
     return SingleChildScrollView(
@@ -732,7 +921,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
             ),
           
           // 上一页按钮
-          if (_currentPage > 0 && _currentPage < 4) // 欢迎页面不显示上一页按钮
+          if (_currentPage > 0 && _currentPage < 5) // 欢迎页面不显示上一页按钮
             Expanded(
               child: CustomButton(
                 text: '上一页',
@@ -742,14 +931,14 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
               ),
             ),
           
-          if ((_currentPage > 0 && _currentPage < 4) || _currentPage == 0) const SizedBox(width: 16),
+          if ((_currentPage > 0 && _currentPage < 5) || _currentPage == 0) const SizedBox(width: 16),
 
           // 下一页/提交按钮 (欢迎页面不显示此按钮)
-          if (_currentPage < 4)
+          if (_currentPage < 5)
             Expanded(
               child: CustomButton(
-                text: _currentPage == 3 ? '完成设置' : '下一页',
-                onPressed: _currentPage == 3 ? _submitForm : _nextPage,
+                text: _currentPage == 4 ? '完成设置' : '下一页',
+                onPressed: _currentPage == 4 ? _submitForm : _nextPage,
                 isLoading: _isLoading,
                 backgroundColor: _primaryColor,
                 isFullWidth: true,
