@@ -69,6 +69,7 @@ def get_user_info(
             financial_info=user_info.financial_info or {},
             risk_info=user_info.risk_info or {},
             retirement_info=user_info.retirement_info or {},
+            insurance_info=user_info.insurance_info or {},
             family_info=user_info.family_info or {},
             goal_info=user_info.goal_info or {},
             other_info=user_info.other_info or {},

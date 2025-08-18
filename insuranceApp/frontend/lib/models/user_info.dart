@@ -4,11 +4,13 @@ class BasicInfo {
   String? age;
   String? city;
   String? gender;
+  String? healthStatus;
 
   BasicInfo({
     this.age,
     this.city,
     this.gender,
+    this.healthStatus,
   });
 
   factory BasicInfo.fromJson(Map<String, dynamic> json) {
@@ -16,6 +18,7 @@ class BasicInfo {
       age: json['age'],
       city: json['city'],
       gender: json['gender'],
+      healthStatus: json['health_status'],
     );
   }
 
@@ -24,6 +27,7 @@ class BasicInfo {
       'age': age,
       'city': city,
       'gender': gender,
+      'health_status': healthStatus,
     };
   }
 
@@ -31,11 +35,13 @@ class BasicInfo {
     String? age,
     String? city,
     String? gender,
+    String? healthStatus,
   }) {
     return BasicInfo(
       age: age ?? this.age,
       city: city ?? this.city,
       gender: gender ?? this.gender,
+      healthStatus: healthStatus ?? this.healthStatus,
     );
   }
 }
@@ -46,6 +52,7 @@ class FinancialInfo {
   String? expenses;
   String? assets;
   String? liabilities;
+  String? currentAssets;
 
   FinancialInfo({
     this.occupation,
@@ -53,6 +60,7 @@ class FinancialInfo {
     this.expenses,
     this.assets,
     this.liabilities,
+    this.currentAssets,
   });
 
   factory FinancialInfo.fromJson(Map<String, dynamic> json) {
@@ -62,6 +70,7 @@ class FinancialInfo {
       expenses: json['expenses'],
       assets: json['assets'],
       liabilities: json['liabilities'],
+      currentAssets: json['current_assets'],
     );
   }
 
@@ -72,6 +81,7 @@ class FinancialInfo {
       'expenses': expenses,
       'assets': assets,
       'liabilities': liabilities,
+      'current_assets': currentAssets,
     };
   }
 
@@ -81,6 +91,7 @@ class FinancialInfo {
     String? expenses,
     String? assets,
     String? liabilities,
+    String? currentAssets,
   }) {
     return FinancialInfo(
       occupation: occupation ?? this.occupation,
@@ -88,6 +99,7 @@ class FinancialInfo {
       expenses: expenses ?? this.expenses,
       assets: assets ?? this.assets,
       liabilities: liabilities ?? this.liabilities,
+      currentAssets: currentAssets ?? this.currentAssets,
     );
   }
 }
@@ -148,6 +160,46 @@ class RetirementInfo {
     return RetirementInfo(
       retirementAge: retirementAge ?? this.retirementAge,
       retirementIncome: retirementIncome ?? this.retirementIncome,
+    );
+  }
+}
+
+class InsuranceInfo {
+  String? socialMedicalInsurance;
+  String? socialEndowmentInsurance;
+  String? businessInsurance;
+
+  InsuranceInfo({
+    this.socialMedicalInsurance,
+    this.socialEndowmentInsurance,
+    this.businessInsurance,
+  });
+
+  factory InsuranceInfo.fromJson(Map<String, dynamic> json) {
+    return InsuranceInfo(
+      socialMedicalInsurance: json['social_medical_insurance'],
+      socialEndowmentInsurance: json['social_endowment_insurance'],
+      businessInsurance: json['business_insurance'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'social_medical_insurance': socialMedicalInsurance,
+      'social_endowment_insurance': socialEndowmentInsurance,
+      'business_insurance': businessInsurance,
+    };
+  }
+
+  InsuranceInfo copyWith({
+    String? socialMedicalInsurance,
+    String? socialEndowmentInsurance,
+    String? businessInsurance,
+  }) {
+    return InsuranceInfo(
+      socialMedicalInsurance: socialMedicalInsurance ?? this.socialMedicalInsurance,
+      socialEndowmentInsurance: socialEndowmentInsurance ?? this.socialEndowmentInsurance,
+      businessInsurance: businessInsurance ?? this.businessInsurance,
     );
   }
 }
@@ -288,6 +340,7 @@ class UserInfo {
   FinancialInfo financialInfo;
   RiskInfo riskInfo;
   RetirementInfo retirementInfo;
+  InsuranceInfo insuranceInfo;
   FamilyInfo familyInfo;
   GoalInfo goalInfo;
   Map<String, dynamic> otherInfo;
@@ -298,6 +351,7 @@ class UserInfo {
     required this.financialInfo,
     required this.riskInfo,
     required this.retirementInfo,
+    required this.insuranceInfo,
     required this.familyInfo,
     required this.goalInfo,
     required this.otherInfo,
@@ -309,6 +363,7 @@ class UserInfo {
       financialInfo: FinancialInfo(),
       riskInfo: RiskInfo(),
       retirementInfo: RetirementInfo(),
+      insuranceInfo: InsuranceInfo(),
       familyInfo: FamilyInfo(familyMembers: []),
       goalInfo: GoalInfo(goals: []),
       otherInfo: {},
@@ -322,6 +377,7 @@ class UserInfo {
       financialInfo: FinancialInfo.fromJson(json['financial_info'] ?? {}),
       riskInfo: RiskInfo.fromJson(json['risk_info'] ?? {}),
       retirementInfo: RetirementInfo.fromJson(json['retirement_info'] ?? {}),
+      insuranceInfo: InsuranceInfo.fromJson(json['insurance_info'] ?? {}),
       familyInfo: FamilyInfo.fromJson(json['family_info'] ?? {}),
       goalInfo: GoalInfo.fromJson(json['goal_info'] ?? {}),
       otherInfo: Map<String, dynamic>.from(json['other_info'] ?? {}),
@@ -335,6 +391,7 @@ class UserInfo {
       'financial_info': financialInfo.toJson(),
       'risk_info': riskInfo.toJson(),
       'retirement_info': retirementInfo.toJson(),
+      'insurance_info': insuranceInfo.toJson(),
       'family_info': familyInfo.toJson(),
       'goal_info': goalInfo.toJson(),
       'other_info': otherInfo,
@@ -347,6 +404,7 @@ class UserInfo {
     FinancialInfo? financialInfo,
     RiskInfo? riskInfo,
     RetirementInfo? retirementInfo,
+    InsuranceInfo? insuranceInfo,
     FamilyInfo? familyInfo,
     GoalInfo? goalInfo,
     Map<String, dynamic>? otherInfo,
@@ -357,6 +415,7 @@ class UserInfo {
       financialInfo: financialInfo ?? this.financialInfo,
       riskInfo: riskInfo ?? this.riskInfo,
       retirementInfo: retirementInfo ?? this.retirementInfo,
+      insuranceInfo: insuranceInfo ?? this.insuranceInfo,
       familyInfo: familyInfo ?? this.familyInfo,
       goalInfo: goalInfo ?? this.goalInfo,
       otherInfo: otherInfo ?? Map.from(this.otherInfo),

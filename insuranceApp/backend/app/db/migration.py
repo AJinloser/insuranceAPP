@@ -149,6 +149,7 @@ class DatabaseMigration:
         migrations = [
             (1, "添加目标管理表", self.migrate_to_v1),
             (2, "优化目标数据结构", self.migrate_to_v2),
+            (3, "添加用户信息新字段", self.migrate_to_v3),
             # 在这里添加更多迁移...
         ]
         
@@ -181,6 +182,18 @@ class DatabaseMigration:
         
         # 如果需要，可以在这里执行数据结构迁移
         # self.migrate_jsonb_data('goals', 'goals', old_structure, new_structure)
+    
+    def migrate_to_v3(self):
+        """迁移到版本3：添加用户信息新字段"""
+        # 添加insurance_info列到user_info表
+        self.add_column_if_not_exists('user_info', 'insurance_info', 'JSONB DEFAULT \'{}\'')
+        
+        # 添加创建时间和更新时间列（如果需要）
+        self.add_column_if_not_exists('user_info', 'created_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
+        self.add_column_if_not_exists('user_info', 'updated_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
+        
+        # 如果需要，可以在这里执行数据结构迁移
+        # self.migrate_jsonb_data('user_info', 'user_info', old_structure, new_structure)
     
     def backup_table(self, table_name: str):
         """备份表数据"""

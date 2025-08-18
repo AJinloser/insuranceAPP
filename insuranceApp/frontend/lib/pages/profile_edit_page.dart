@@ -22,6 +22,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   late TextEditingController _ageController;
   late TextEditingController _cityController;
   late TextEditingController _genderController;
+  late TextEditingController _healthStatusController;
 
   // 财务信息控制器
   late TextEditingController _occupationController;
@@ -29,6 +30,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   late TextEditingController _expensesController;
   late TextEditingController _assetsController;
   late TextEditingController _liabilitiesController;
+  late TextEditingController _currentAssetsController;
 
   // 风险信息控制器
   late TextEditingController _riskAversionController;
@@ -36,6 +38,11 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   // 退休信息控制器
   late TextEditingController _retirementAgeController;
   late TextEditingController _retirementIncomeController;
+
+  // 保险信息控制器
+  late TextEditingController _socialMedicalInsuranceController;
+  late TextEditingController _socialEndowmentInsuranceController;
+  late TextEditingController _businessInsuranceController;
 
   // 家庭成员控制器列表
   List<List<TextEditingController>> _familyMemberControllers = [];
@@ -58,6 +65,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     _ageController = TextEditingController(text: _editedUserInfo.basicInfo.age ?? '');
     _cityController = TextEditingController(text: _editedUserInfo.basicInfo.city ?? '');
     _genderController = TextEditingController(text: _editedUserInfo.basicInfo.gender ?? '');
+    _healthStatusController = TextEditingController(text: _editedUserInfo.basicInfo.healthStatus ?? '');
 
     // 财务信息
     _occupationController = TextEditingController(text: _editedUserInfo.financialInfo.occupation ?? '');
@@ -65,6 +73,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     _expensesController = TextEditingController(text: _editedUserInfo.financialInfo.expenses ?? '');
     _assetsController = TextEditingController(text: _editedUserInfo.financialInfo.assets ?? '');
     _liabilitiesController = TextEditingController(text: _editedUserInfo.financialInfo.liabilities ?? '');
+    _currentAssetsController = TextEditingController(text: _editedUserInfo.financialInfo.currentAssets ?? '');
 
     // 风险信息
     _riskAversionController = TextEditingController(text: _editedUserInfo.riskInfo.riskAversion ?? '');
@@ -72,6 +81,11 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     // 退休信息
     _retirementAgeController = TextEditingController(text: _editedUserInfo.retirementInfo.retirementAge ?? '');
     _retirementIncomeController = TextEditingController(text: _editedUserInfo.retirementInfo.retirementIncome ?? '');
+
+    // 保险信息
+    _socialMedicalInsuranceController = TextEditingController(text: _editedUserInfo.insuranceInfo.socialMedicalInsurance ?? '');
+    _socialEndowmentInsuranceController = TextEditingController(text: _editedUserInfo.insuranceInfo.socialEndowmentInsurance ?? '');
+    _businessInsuranceController = TextEditingController(text: _editedUserInfo.insuranceInfo.businessInsurance ?? '');
 
     // 初始化家庭成员控制器
     _initializeFamilyMemberControllers();
@@ -120,6 +134,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     _ageController.dispose();
     _cityController.dispose();
     _genderController.dispose();
+    _healthStatusController.dispose();
     
     // 财务信息控制器
     _occupationController.dispose();
@@ -127,6 +142,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     _expensesController.dispose();
     _assetsController.dispose();
     _liabilitiesController.dispose();
+    _currentAssetsController.dispose();
     
     // 风险信息控制器
     _riskAversionController.dispose();
@@ -134,6 +150,11 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     // 退休信息控制器
     _retirementAgeController.dispose();
     _retirementIncomeController.dispose();
+
+    // 保险信息控制器
+    _socialMedicalInsuranceController.dispose();
+    _socialEndowmentInsuranceController.dispose();
+    _businessInsuranceController.dispose();
 
     // 家庭成员控制器
     for (final controllers in _familyMemberControllers) {
@@ -181,6 +202,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
               const SizedBox(height: 20),
               _buildRetirementInfoSection(),
               const SizedBox(height: 20),
+              _buildInsuranceInfoSection(),
+              const SizedBox(height: 20),
               _buildFamilyInfoSection(),
               const SizedBox(height: 20),
               _buildGoalInfoSection(),
@@ -217,6 +240,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
             _buildTextField('城市', _cityController, Icons.location_city),
             const SizedBox(height: 12),
             _buildTextField('性别', _genderController, Icons.person),
+            const SizedBox(height: 12),
+            _buildTextField('健康状况', _healthStatusController, Icons.health_and_safety),
           ],
         ),
       ),
@@ -248,6 +273,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
             _buildTextField('资产', _assetsController, Icons.account_balance),
             const SizedBox(height: 12),
             _buildTextField('负债', _liabilitiesController, Icons.credit_card),
+            const SizedBox(height: 12),
+            _buildTextField('流动资产', _currentAssetsController, Icons.account_balance_wallet),
           ],
         ),
       ),
@@ -296,6 +323,33 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
             _buildTextField('退休年龄', _retirementAgeController, Icons.elderly),
             const SizedBox(height: 12),
             _buildTextField('退休收入', _retirementIncomeController, Icons.savings),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInsuranceInfoSection() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '保险信息',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildTextField('社会医疗保险', _socialMedicalInsuranceController, Icons.medical_services),
+            const SizedBox(height: 12),
+            _buildTextField('社会养老保险', _socialEndowmentInsuranceController, Icons.handshake),
+            const SizedBox(height: 12),
+            _buildTextField('商业保险', _businessInsuranceController, Icons.business_center),
           ],
         ),
       ),
@@ -639,6 +693,9 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       case '性别':
         hintText = '请输入您的性别，例如：男/女/其他';
         break;
+      case '健康状况':
+        hintText = '请填写您的健康状况，例如：良好、一般、较差';
+        break;
         
       // 财务信息
       case '职业':
@@ -656,6 +713,9 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       case '负债':
         hintText = '请填写您的负债情况，例如：房贷100万、车贷10万等，也可以给出具体缴纳的期限等有用信息。';
         break;
+      case '当前资产':
+        hintText = '请填写您当前的净资产，例如：100万';
+        break;
         
       // 风险信息
       case '风险厌恶程度':
@@ -668,6 +728,17 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         break;
       case '退休收入':
         hintText = '请填写您期望的退休月收入，例如：8000元/月';
+        break;
+        
+      // 保险信息
+      case '社会医疗保险':
+        hintText = '请填写您的社会医疗保险情况，例如：已缴费5年、城镇职工医保等';
+        break;
+      case '社会养老保险':
+        hintText = '请填写您的社会养老保险情况，例如：已缴费10年、城镇职工养老保险等';
+        break;
+      case '商业保险':
+        hintText = '请填写您已购买的商业保险，例如：重疾险50万、意外险100万等';
         break;
     }
     
@@ -848,6 +919,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         age: _ageController.text.isEmpty ? null : _ageController.text,
         city: _cityController.text.isEmpty ? null : _cityController.text,
         gender: _genderController.text.isEmpty ? null : _genderController.text,
+        healthStatus: _healthStatusController.text.isEmpty ? null : _healthStatusController.text,
       ),
       financialInfo: _editedUserInfo.financialInfo.copyWith(
         occupation: _occupationController.text.isEmpty ? null : _occupationController.text,
@@ -855,6 +927,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         expenses: _expensesController.text.isEmpty ? null : _expensesController.text,
         assets: _assetsController.text.isEmpty ? null : _assetsController.text,
         liabilities: _liabilitiesController.text.isEmpty ? null : _liabilitiesController.text,
+        currentAssets: _currentAssetsController.text.isEmpty ? null : _currentAssetsController.text,
       ),
       riskInfo: _editedUserInfo.riskInfo.copyWith(
         riskAversion: _riskAversionController.text.isEmpty ? null : _riskAversionController.text,
@@ -862,6 +935,11 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       retirementInfo: _editedUserInfo.retirementInfo.copyWith(
         retirementAge: _retirementAgeController.text.isEmpty ? null : _retirementAgeController.text,
         retirementIncome: _retirementIncomeController.text.isEmpty ? null : _retirementIncomeController.text,
+      ),
+      insuranceInfo: _editedUserInfo.insuranceInfo.copyWith(
+        socialMedicalInsurance: _socialMedicalInsuranceController.text.isEmpty ? null : _socialMedicalInsuranceController.text,
+        socialEndowmentInsurance: _socialEndowmentInsuranceController.text.isEmpty ? null : _socialEndowmentInsuranceController.text,
+        businessInsurance: _businessInsuranceController.text.isEmpty ? null : _businessInsuranceController.text,
       ),
       familyInfo: _editedUserInfo.familyInfo.copyWith(
         familyMembers: familyMembers,

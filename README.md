@@ -573,17 +573,23 @@ insuranceApp/
             - age:年龄
             - city:城市
             - gender:性别
+            - health_status: 健康状况(新增字段)
         - financial_info: 用户财务信息
             - occupation: 职业
             - income: 收入
             - expenses: 支出
             - assets: 资产
             - liabilities: 负债
+            - current_assets: 流动资产（新增字段）
         - risk_info:
             - risk_aversion: 风险厌恶程度
         - retirement_info: 退休信息
             - retirement_age: 退休年龄
             - retirement_income: 退休收入
+        - insurance_info: 保险信息
+            - social_medical_insurance: 社会医疗保险(新增字段)
+            - social_endowment_insurance: 社会养老保险(新增字段)
+            - business_insurance: 商业保险(新增字段)
         - family_info: 家庭信息（可以有多个家庭成员）
             - family_members: 家庭成员列表
                 - relation: 关系

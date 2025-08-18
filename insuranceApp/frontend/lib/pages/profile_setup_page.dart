@@ -121,6 +121,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
           age: null,
           city: null,
           gender: null,
+          healthStatus: null,
         ),
         financialInfo: FinancialInfo(
           occupation: null,
@@ -128,9 +129,11 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
           expenses: null,
           assets: null,
           liabilities: null,
+          currentAssets: null,
         ),
         riskInfo: RiskInfo(),
         retirementInfo: RetirementInfo(),
+        insuranceInfo: InsuranceInfo(),
         familyInfo: FamilyInfo(familyMembers: []),
         goalInfo: GoalInfo(goals: []),
         otherInfo: {},
@@ -199,6 +202,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
           age: _ageController.text.isEmpty ? null : _ageController.text,
           city: _cityController.text.isEmpty ? null : _cityController.text,
           gender: _genderController.text.isEmpty ? null : _genderController.text,
+          healthStatus: null,
         ),
         financialInfo: FinancialInfo(
           occupation: _occupationController.text.isEmpty ? null : _occupationController.text,
@@ -206,9 +210,11 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
           expenses: _expensesController.text.isEmpty ? null : _expensesController.text,
           assets: _assetsController.text.isEmpty ? null : _assetsController.text,
           liabilities: _liabilitiesController.text.isEmpty ? null : _liabilitiesController.text,
+          currentAssets: null,
         ),
         riskInfo: RiskInfo(),
         retirementInfo: RetirementInfo(),
+        insuranceInfo: InsuranceInfo(),
         familyInfo: FamilyInfo(familyMembers: []),
         goalInfo: GoalInfo(
           goals: _goalDetailsController.text.isEmpty 
