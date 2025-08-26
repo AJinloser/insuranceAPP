@@ -4,6 +4,7 @@ import '../models/insurance_product.dart';
 import '../services/insurance_service.dart';
 import '../services/insurance_list_service.dart';
 import '../services/insurance_chat_service.dart';
+import '../services/settings_service.dart';
 import '../services/auth_service.dart';
 import 'user_insurance_list_page.dart';
 
@@ -87,8 +88,15 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     
                     const SizedBox(height: 16),
                     
-                    // 与保险产品对话按钮
-                    _buildChatWithProductButton(),
+                    // 与保险产品对话按钮（根据功能开关显示）
+                    Consumer<SettingsService>(
+                      builder: (context, settingsService, child) {
+                        if (settingsService.productChatEnabled) {
+                          return _buildChatWithProductButton();
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
                     
                     const SizedBox(height: 16),
                   ],

@@ -273,31 +273,81 @@ class _ProfilePageState extends State<ProfilePage> {
             },
           ),
         ),
-        const SizedBox(height: 12),
-        Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ListTile(
-            leading: Icon(
-              Icons.privacy_tip_outlined,
-              color: Theme.of(context).primaryColor,
-            ),
-            title: const Text('隐私政策'),
-            subtitle: const Text('了解我们如何保护您的隐私'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const PrivacyPolicyPage(),
+        const SizedBox(height: 24), // 增加间距，将隐私政策与其他按钮隔开
+        _buildPrivacyPolicyCard(context), // 单独构建隐私政策卡片
+      ],
+    );
+  }
+
+  Widget _buildPrivacyPolicyCard(BuildContext context) {
+    return Card(
+      elevation: 3, // 稍微增加阴影以突出重要性
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Colors.red.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(20), // 增加内边距使按钮更大
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const PrivacyPolicyPage(),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              );
-            },
+                child: Icon(
+                  Icons.privacy_tip_outlined,
+                  color: Colors.red[700],
+                  size: 28, // 增大图标尺寸
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '隐私政策',
+                      style: TextStyle(
+                        fontSize: 18, // 增大字体
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red[700],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '了解我们如何保护您的隐私',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 18,
+                color: Colors.red[700],
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 

@@ -395,6 +395,72 @@ class _MenuPageState extends State<MenuPage> {
                       },
                       activeColor: Theme.of(context).primaryColor,
                     ),
+
+                    const Divider(height: 1),
+
+                    // 产品对比功能开关
+                    SwitchListTile(
+                      title: const Text(
+                        '产品对比功能',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        '启用保险产品对比功能',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                      value: settingsService.productComparisonEnabled,
+                      onChanged: (value) {
+                        settingsService.setProductComparisonEnabled(value);
+                      },
+                      activeColor: Theme.of(context).primaryColor,
+                    ),
+
+                    const Divider(height: 1),
+
+                    // 产品对话功能开关
+                    SwitchListTile(
+                      title: const Text(
+                        '产品对话功能',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        '启用与保险产品对话功能',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                      value: settingsService.productChatEnabled,
+                      onChanged: (value) {
+                        settingsService.setProductChatEnabled(value);
+                      },
+                      activeColor: Theme.of(context).primaryColor,
+                    ),
+
+                    const Divider(height: 1),
+
+                    // 保单分析功能开关
+                    SwitchListTile(
+                      title: const Text(
+                        '保单分析功能',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        '启用保单分析对话功能',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                      value: settingsService.insuranceAnalysisEnabled,
+                      onChanged: (value) {
+                        settingsService.setInsuranceAnalysisEnabled(value);
+                      },
+                      activeColor: Theme.of(context).primaryColor,
+                    ),
                   ],
                 ),
               ),

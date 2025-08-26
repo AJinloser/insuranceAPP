@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/insurance_product.dart';
 import '../services/insurance_service.dart';
 import '../services/comparison_chat_service.dart';
+import '../services/settings_service.dart';
 import '../widgets/insurance_product_card.dart';
 import 'product_detail_page.dart';
 
@@ -536,10 +537,16 @@ class _InsuranceSearchPageState extends State<InsuranceSearchPage> with TickerPr
           itemCount: service.products.length,
           itemBuilder: (context, index) {
             final product = service.products[index];
-            return InsuranceProductCard(
-              product: product,
-              onViewDetails: () => _showProductDetail(product),
-              onAddToComparison: () => _addToComparison(product),
+            return Consumer<SettingsService>(
+              builder: (context, settingsService, child) {
+                return InsuranceProductCard(
+                  product: product,
+                  onViewDetails: () => _showProductDetail(product),
+                  onAddToComparison: settingsService.productComparisonEnabled 
+                      ? () => _addToComparison(product)
+                      : null,
+                );
+              },
             );
           },
         ),
@@ -547,8 +554,15 @@ class _InsuranceSearchPageState extends State<InsuranceSearchPage> with TickerPr
         // 分页器
         if (_totalPages > 1) _buildPagination(),
         
-        // 产品对比卡片
-        _buildProductComparisonCard(),
+        // 产品对比卡片（根据功能开关显示）
+        Consumer<SettingsService>(
+          builder: (context, settingsService, child) {
+            if (settingsService.productComparisonEnabled) {
+              return _buildProductComparisonCard();
+            }
+            return const SizedBox.shrink();
+          },
+        ),
       ],
     );
   }

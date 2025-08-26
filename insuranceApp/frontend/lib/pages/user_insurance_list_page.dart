@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/insurance_list_service.dart';
 import '../services/analysis_chat_service.dart';
+import '../services/settings_service.dart';
 import '../widgets/insurance_product_card.dart';
 import 'product_detail_page.dart';
 
@@ -303,46 +304,52 @@ class _UserInsuranceListPageState extends State<UserInsuranceListPage> {
                   ),
                 ),
                 
-                // 保单分析按钮区域
-                if (service.insuranceList.isNotEmpty && !_isEditMode)
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 4,
-                          offset: const Offset(0, -2),
+                // 保单分析按钮区域（根据功能开关显示）
+                Consumer<SettingsService>(
+                  builder: (context, settingsService, child) {
+                    if (service.insuranceList.isNotEmpty && !_isEditMode && settingsService.insuranceAnalysisEnabled) {
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, -2),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: SafeArea(
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _startAnalysisChat,
-                          icon: const Icon(Icons.analytics_outlined),
-                          label: const Text(
-                            '保单分析',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
+                        child: SafeArea(
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _startAnalysisChat,
+                              icon: const Icon(Icons.analytics_outlined),
+                              label: const Text(
+                                '保单分析',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).primaryColor,
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size(double.infinity, 50),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 2,
+                              ),
                             ),
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).primaryColor,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size(double.infinity, 50),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 2,
-                          ),
                         ),
-                      ),
-                    ),
-                  ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
                 
                 // 修改模式下的底部操作栏
                 if (_isEditMode)

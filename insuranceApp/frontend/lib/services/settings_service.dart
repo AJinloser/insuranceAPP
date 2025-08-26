@@ -8,14 +8,29 @@ class SettingsService extends ChangeNotifier {
   static const String _insuranceJsonDetectionKey = 'insurance_json_detection_enabled';
   static const String _goalJsonDetectionKey = 'goal_json_detection_enabled';
   static const String _processedGoalSuggestionsKey = 'processed_goal_suggestions';
+  
+  // 功能开关相关
+  static const String _productComparisonEnabledKey = 'product_comparison_enabled';
+  static const String _productChatEnabledKey = 'product_chat_enabled';
+  static const String _insuranceAnalysisEnabledKey = 'insurance_analysis_enabled';
 
   bool _insuranceJsonDetectionEnabled = false;
   bool _goalJsonDetectionEnabled = true;
   Set<String> _processedGoalSuggestions = <String>{};
+  
+  // 功能开关状态
+  bool _productComparisonEnabled = false;
+  bool _productChatEnabled = false;
+  bool _insuranceAnalysisEnabled = false;
 
   bool get insuranceJsonDetectionEnabled => _insuranceJsonDetectionEnabled;
   bool get goalJsonDetectionEnabled => _goalJsonDetectionEnabled;
   Set<String> get processedGoalSuggestions => Set.from(_processedGoalSuggestions);
+  
+  // 功能开关getter
+  bool get productComparisonEnabled => _productComparisonEnabled;
+  bool get productChatEnabled => _productChatEnabled;
+  bool get insuranceAnalysisEnabled => _insuranceAnalysisEnabled;
 
   /// 初始化设置
   Future<void> init() async {
@@ -28,6 +43,11 @@ class SettingsService extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       _insuranceJsonDetectionEnabled = prefs.getBool(_insuranceJsonDetectionKey) ?? false;
       _goalJsonDetectionEnabled = prefs.getBool(_goalJsonDetectionKey) ?? true;
+      
+      // 加载功能开关设置
+      _productComparisonEnabled = prefs.getBool(_productComparisonEnabledKey) ?? false;
+      _productChatEnabled = prefs.getBool(_productChatEnabledKey) ?? false;
+      _insuranceAnalysisEnabled = prefs.getBool(_insuranceAnalysisEnabledKey) ?? false;
       
       // 加载已处理的目标建议
       final processedList = prefs.getStringList(_processedGoalSuggestionsKey) ?? [];
@@ -45,6 +65,11 @@ class SettingsService extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_insuranceJsonDetectionKey, _insuranceJsonDetectionEnabled);
       await prefs.setBool(_goalJsonDetectionKey, _goalJsonDetectionEnabled);
+      
+      // 保存功能开关设置
+      await prefs.setBool(_productComparisonEnabledKey, _productComparisonEnabled);
+      await prefs.setBool(_productChatEnabledKey, _productChatEnabled);
+      await prefs.setBool(_insuranceAnalysisEnabledKey, _insuranceAnalysisEnabled);
       
       // 保存已处理的目标建议
       await prefs.setStringList(_processedGoalSuggestionsKey, _processedGoalSuggestions.toList());
@@ -113,5 +138,32 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
     await saveSettings();
     debugPrint('===> SettingsService: 重置已处理的目标建议');
+  }
+
+  /// 设置产品对比功能开关
+  Future<void> setProductComparisonEnabled(bool enabled) async {
+    if (_productComparisonEnabled != enabled) {
+      _productComparisonEnabled = enabled;
+      notifyListeners();
+      await saveSettings();
+    }
+  }
+
+  /// 设置产品对话功能开关
+  Future<void> setProductChatEnabled(bool enabled) async {
+    if (_productChatEnabled != enabled) {
+      _productChatEnabled = enabled;
+      notifyListeners();
+      await saveSettings();
+    }
+  }
+
+  /// 设置保单分析功能开关
+  Future<void> setInsuranceAnalysisEnabled(bool enabled) async {
+    if (_insuranceAnalysisEnabled != enabled) {
+      _insuranceAnalysisEnabled = enabled;
+      notifyListeners();
+      await saveSettings();
+    }
   }
 } 

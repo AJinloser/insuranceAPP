@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import '../models/dify_models.dart';
 import '../services/chat_service.dart';
+import '../services/settings_service.dart';
+import '../services/comparison_chat_service.dart';
+import '../services/insurance_chat_service.dart';
+import '../services/analysis_chat_service.dart';
 import '../widgets/ai_module_card.dart';
 import '../widgets/ai_welcome_view.dart';
 import '../widgets/custom_button.dart';
@@ -291,8 +296,8 @@ class _DefaultChatPageState extends State<DefaultChatPage> {
 
   /// 构建AI模块选择
   Widget _buildModuleSelection() {
-    return Consumer<ChatService>(
-      builder: (context, chatService, child) {
+    return Consumer2<ChatService, SettingsService>(
+      builder: (context, chatService, settingsService, child) {
         if (chatService.aiModules.isEmpty) {
           return Container(
             padding: const EdgeInsets.all(20),
@@ -309,6 +314,40 @@ class _DefaultChatPageState extends State<DefaultChatPage> {
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // 根据功能开关过滤AI模块
+        final filteredModules = _getFilteredModules(chatService.aiModules, settingsService);
+
+        if (filteredModules.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.settings,
+                  color: Colors.grey[400],
+                  size: 48,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '当前功能开关已关闭',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '请在菜单中开启相关功能',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
                   ),
                 ),
               ],
@@ -334,9 +373,9 @@ class _DefaultChatPageState extends State<DefaultChatPage> {
               height: 140,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                itemCount: chatService.aiModules.length,
+                itemCount: filteredModules.length,
                 itemBuilder: (context, index) {
-                  final module = chatService.aiModules[index];
+                  final module = filteredModules[index];
                   final isSelected = _selectedModule?.apiKey == module.apiKey;
                   
                   return AIModuleCard(
@@ -351,6 +390,34 @@ class _DefaultChatPageState extends State<DefaultChatPage> {
         );
       },
     );
+  }
+
+  /// 根据功能开关过滤AI模块
+  List<AIModule> _getFilteredModules(List<AIModule> modules, SettingsService settingsService) {
+    final List<AIModule> filteredModules = [];
+    
+    for (final module in modules) {
+      bool shouldInclude = true;
+      
+      // 检查是否是产品对比模块
+      if (module.apiKey == ComparisonChatService.comparisonChatApiKey) {
+        shouldInclude = settingsService.productComparisonEnabled;
+      }
+      // 检查是否是产品对话模块
+      else if (module.apiKey == InsuranceChatService.insuranceChatApiKey) {
+        shouldInclude = settingsService.productChatEnabled;
+      }
+      // 检查是否是保单分析模块
+      else if (module.apiKey == dotenv.env['CHAT_WITH_INSURANCE_LIST_KEY']) {
+        shouldInclude = settingsService.insuranceAnalysisEnabled;
+      }
+      
+      if (shouldInclude) {
+        filteredModules.add(module);
+      }
+    }
+    
+    return filteredModules;
   }
 
   /// 构建选中模块的详细信息
