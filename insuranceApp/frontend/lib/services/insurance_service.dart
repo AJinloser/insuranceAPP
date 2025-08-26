@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../models/insurance_product.dart';
 import 'api_service.dart';
+import '../utils/error_logger.dart';
 
 /// 保险产品搜索响应模型
 class InsuranceSearchResponse {
@@ -78,6 +79,14 @@ class InsuranceService extends ChangeNotifier {
         _setError(response.data['message'] ?? '获取产品类型失败');
       }
     } catch (e) {
+      // 记录获取保险产品类型错误
+      await logInsuranceError(
+        message: '获取保险产品类型失败: $e',
+        serviceName: 'InsuranceService',
+        apiEndpoint: '/insurance_products/product_types',
+        stackTrace: e.toString(),
+      );
+      
       _setError('网络错误: $e');
       debugPrint('获取保险产品类型失败: $e');
     } finally {
@@ -107,6 +116,15 @@ class InsuranceService extends ChangeNotifier {
         _productFields = [];
       }
     } catch (e) {
+      // 记录获取保险产品字段错误
+      await logInsuranceError(
+        message: '获取保险产品字段失败: $e',
+        serviceName: 'InsuranceService',
+        apiEndpoint: '/insurance_products/product_fields',
+        productType: productType,
+        stackTrace: e.toString(),
+      );
+      
       _setError('网络错误: $e');
       _productFields = [];
       debugPrint('获取保险产品字段失败: $e');

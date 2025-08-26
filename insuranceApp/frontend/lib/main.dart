@@ -16,6 +16,8 @@ import 'services/insurance_list_service.dart';
 import 'services/user_info_service.dart';
 import 'services/goal_service.dart';
 import 'services/settings_service.dart';
+import 'utils/error_logger.dart';
+import 'utils/global_error_handler.dart';
 
 // 全局RouteObserver
 final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
@@ -23,12 +25,32 @@ final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // 初始化全局错误处理器
+  GlobalErrorHandler.init();
+  
+  // 初始化错误日志记录器
+  try {
+    await ErrorLogger.instance.init();
+    debugPrint("===> ErrorLogger初始化成功");
+    
+    // 清理旧日志文件
+    await ErrorLogger.instance.cleanOldLogs();
+  } catch (e) {
+    debugPrint("===> ErrorLogger初始化失败: $e");
+  }
+  
   // 加载环境变量文件
   try {
     await dotenv.load(fileName: ".env");
     debugPrint("===> 成功加载.env文件");
   } catch (e) {
     debugPrint("===> 加载.env文件失败: $e");
+    // 记录环境变量加载错误
+    await logServiceError(
+      message: '加载.env文件失败: $e',
+      serviceName: 'main',
+      stackTrace: e.toString(),
+    );
   }
   
   // 初始化认证服务

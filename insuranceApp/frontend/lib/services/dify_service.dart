@@ -8,6 +8,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/dify_models.dart';
+import '../utils/error_logger.dart';
 
 /// Dify API服务类
 /// 用于与Dify API进行交互
@@ -61,6 +62,13 @@ class DifyService {
       final response = await _dio.get('/info');
       return AppInfo.fromJson(response.data);
     } catch (e) {
+      await logApiError(
+        message: '获取应用信息失败: $e',
+        userId: "",
+        apiEndpoint: '/info',
+        serviceName: 'DifyService',
+        stackTrace: e.toString(),
+      );
       throw _handleError(e);
     }
   }
@@ -101,6 +109,13 @@ class DifyService {
       final List<dynamic> conversationsData = response.data['data'];
       return conversationsData.map((json) => Conversation.fromJson(json)).toList();
     } catch (e) {
+      await logApiError(
+        message: '获取会话列表失败: $e',
+        userId: userId,
+        apiEndpoint: '/conversations',
+        serviceName: 'DifyService',
+        stackTrace: e.toString(),
+      );
       throw _handleError(e);
     }
   }
@@ -116,6 +131,13 @@ class DifyService {
         data: {'user': userId},
       );
     } catch (e) {
+      await logApiError(
+        message: '删除会话失败: $e',
+        userId: userId,
+        apiEndpoint: '/conversations/$conversationId',
+        serviceName: 'DifyService',
+        stackTrace: e.toString(),
+      );
       throw _handleError(e);
     }
   }
@@ -174,6 +196,13 @@ class DifyService {
       final List<dynamic> messagesData = response.data['data'];
       return messagesData.map((json) => ChatMessage.fromJson(json)).toList();
     } catch (e) {
+      await logApiError(
+        message: '获取会话历史消息失败: $e',
+        userId: userId,
+        apiEndpoint: '/messages',
+        serviceName: 'DifyService',
+        stackTrace: e.toString(),
+      );
       throw _handleError(e);
     }
   }
@@ -290,6 +319,13 @@ class DifyService {
         }
       }
     } catch (e) {
+      await logApiError(
+        message: '发送消息流式模式失败: $e',
+        userId: userId,
+        apiEndpoint: '/chat-messages',
+        serviceName: 'DifyService',
+        stackTrace: e.toString(),
+      );
       throw _handleError(e);
     }
   }
@@ -305,6 +341,13 @@ class DifyService {
         data: {'user': userId},
       );
     } catch (e) {
+      await logApiError(
+        message: '停止响应失败: $e',
+        userId: userId,
+        apiEndpoint: '/chat-messages/$taskId/stop',
+        serviceName: 'DifyService',
+        stackTrace: e.toString(),
+      );
       throw _handleError(e);
     }
   }
@@ -349,6 +392,13 @@ class DifyService {
       final List<dynamic> questions = response.data['data'];
       return questions.map((q) => q.toString()).toList();
     } catch (e) {
+      await logApiError(
+        message: '获取下一轮建议问题列表失败: $e',
+        userId: userId,
+        apiEndpoint: '/messages/$messageId/suggested',
+        serviceName: 'DifyService',
+        stackTrace: e.toString(),
+      );
       throw _handleError(e);
     }
   }

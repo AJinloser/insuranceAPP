@@ -9,7 +9,9 @@ from app.api.insurance_products import router as insurance_products_router
 from app.api.insurance_list import router as insurance_list_router
 from app.api.user_info import router as user_info_router
 from app.api.goals import router as goals_router
+from app.api.logs import router as logs_router
 from app.core.config import settings
+from app.core.error_handler import global_exception_handler
 from app.db.base import Base, engine, get_db
 from app.db.init_db import init_db
 
@@ -49,6 +51,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 添加全局异常处理器
+app.add_exception_handler(Exception, global_exception_handler)
+
 # 注册路由
 app.include_router(auth_router, prefix="/api/v1", tags=["认证"])
 app.include_router(ai_modules_router, prefix="/api/v1", tags=["AI模块"])
@@ -64,6 +69,7 @@ app.include_router(
 )
 app.include_router(user_info_router, prefix="/api/v1", tags=["用户个人信息"])
 app.include_router(goals_router, prefix="/api/v1", tags=["目标管理"])
+app.include_router(logs_router, prefix="/api/v1/logs", tags=["日志管理"])
 
 
 @app.get("/api/health")
