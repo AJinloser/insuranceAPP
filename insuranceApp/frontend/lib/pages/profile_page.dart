@@ -4,9 +4,12 @@ import 'package:provider/provider.dart';
 import '../models/user_info.dart';
 import '../services/user_info_service.dart';
 import '../services/auth_service.dart';
+import '../services/developer_service.dart';
+import '../widgets/developer_password_dialog.dart';
 import 'profile_edit_page.dart';
 import 'privacy_policy_page.dart';
 import 'help_page.dart';
+import 'developer_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -273,9 +276,30 @@ class _ProfilePageState extends State<ProfilePage> {
             },
           ),
         ),
+        const SizedBox(height: 12),
+        _buildDeveloperCard(context),
         const SizedBox(height: 24), // 增加间距，将隐私政策与其他按钮隔开
         _buildPrivacyPolicyCard(context), // 单独构建隐私政策卡片
       ],
+    );
+  }
+
+  Widget _buildDeveloperCard(BuildContext context) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        leading: Icon(
+          Icons.developer_mode,
+          color: Theme.of(context).primaryColor,
+        ),
+        title: const Text('开发者选项'),
+        subtitle: const Text('访问开发者功能和设置'),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: () => _showDeveloperPasswordDialog(context),
+      ),
     );
   }
 
@@ -362,6 +386,51 @@ class _ProfilePageState extends State<ProfilePage> {
       final userInfoService = Provider.of<UserInfoService>(context, listen: false);
       userInfoService.fetchUserInfo();
     });
+  }
+
+  /// 显示开发者密码输入对话框
+  Future<void> _showDeveloperPasswordDialog(BuildContext context) async {
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const DeveloperPasswordDialog(),
+    );
+
+    // 如果用户点击了取消或者对话框被关闭，result会是null
+    if (result == null) {
+      return; // 用户取消了操作，直接返回
+    }
+
+    // 如果用户输入了密码，进行验证
+    if (result.isNotEmpty) {
+      // 获取开发者服务
+      final developerService = Provider.of<DeveloperService>(context, listen: false);
+      
+      // 验证密码
+      final isValid = await developerService.verifyPassword(result);
+      
+      if (isValid) {
+        // 密码正确，跳转到开发者页面
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const DeveloperPage(),
+            ),
+          );
+        }
+      } else {
+        // 密码错误，显示错误提示
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('密码错误，请重试'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 
   void _showLogoutDialog(BuildContext context) {

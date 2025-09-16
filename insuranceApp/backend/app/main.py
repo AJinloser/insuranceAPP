@@ -10,6 +10,7 @@ from app.api.insurance_list import router as insurance_list_router
 from app.api.user_info import router as user_info_router
 from app.api.goals import router as goals_router
 from app.api.logs import router as logs_router
+from app.api.admin import router as admin_router
 from app.core.config import settings
 from app.core.error_handler import global_exception_handler
 from app.db.base import Base, engine, get_db
@@ -70,6 +71,7 @@ app.include_router(
 app.include_router(user_info_router, prefix="/api/v1", tags=["用户个人信息"])
 app.include_router(goals_router, prefix="/api/v1", tags=["目标管理"])
 app.include_router(logs_router, prefix="/api/v1/logs", tags=["日志管理"])
+app.include_router(admin_router, prefix="/api/v1/admin", tags=["管理员"])
 
 
 @app.get("/api/health")

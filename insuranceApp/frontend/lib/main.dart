@@ -16,6 +16,7 @@ import 'services/insurance_list_service.dart';
 import 'services/user_info_service.dart';
 import 'services/goal_service.dart';
 import 'services/settings_service.dart';
+import 'services/developer_service.dart';
 import 'utils/error_logger.dart';
 import 'utils/global_error_handler.dart';
 
@@ -85,6 +86,9 @@ void main() async {
     debugPrint("===> SettingsService初始化失败: $e");
   }
   
+  // 初始化开发者服务
+  final developerService = DeveloperService();
+  
   runApp(
     MultiProvider(
       providers: [
@@ -94,6 +98,7 @@ void main() async {
         ChangeNotifierProvider.value(value: insuranceListService),
         ChangeNotifierProvider.value(value: goalService),
         ChangeNotifierProvider.value(value: settingsService),
+        ChangeNotifierProvider.value(value: developerService),
         ChangeNotifierProxyProvider<AuthService, UserInfoService>(
           create: (context) => UserInfoService(authService),
           update: (context, auth, previous) => previous ?? UserInfoService(auth),
