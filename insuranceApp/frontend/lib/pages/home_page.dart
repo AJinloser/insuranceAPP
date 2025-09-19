@@ -36,6 +36,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
   String? _currentConversationId;
   String? _currentInitialQuestion;
   String? _currentProductInfo;
+  bool _showConversationPage = false; // 控制是否显示对话页面
   
   // 标题列表
   final List<String> _titles = const [
@@ -113,10 +114,16 @@ class _HomePageState extends State<HomePage> with RouteAware {
 
   /// 更新页面列表
   void _updatePages() {
+    final shouldShowConversation = (_currentConversationId != null || _currentInitialQuestion != null || _currentProductInfo != null || _showConversationPage);
+    debugPrint('===> HomePage: _updatePages, shouldShowConversation: $shouldShowConversation');
+    debugPrint('===> HomePage: _currentConversationId: $_currentConversationId, _currentInitialQuestion: $_currentInitialQuestion, _currentProductInfo: $_currentProductInfo, _showConversationPage: $_showConversationPage');
+    
     _pages = [
-      // 如果有对话相关参数（conversationId、initialQuestion或productInfo），显示ConversationPage
-      // 否则显示DefaultChatPage
-      (_currentConversationId != null || _currentInitialQuestion != null || _currentProductInfo != null)
+      // 智能助手页面：
+      // 1. 如果有conversationId、initialQuestion或productInfo，显示ConversationPage
+      // 2. 如果_showConversationPage为true（用户选择了AI模块），显示ConversationPage
+      // 3. 否则显示DefaultChatPage（AI模块选择页面）
+      shouldShowConversation
           ? ConversationPage(
               conversationId: _currentConversationId,
               initialQuestion: _currentInitialQuestion,
@@ -124,31 +131,34 @@ class _HomePageState extends State<HomePage> with RouteAware {
               onInitialQuestionSent: _clearInitialData, // 添加回调
               onNewConversation: resetToDefaultChat, // 添加新对话回调
               onConversationCreated: _handleConversationCreated, // 添加会话创建回调
+              onBack: resetToDefaultChat, // 添加返回回调
             )
           : DefaultChatPage(
-              onStartConversation: _handleStartConversation, // 添加回调
+              onModuleSelected: _handleModuleSelected, // 添加模块选择回调
             ),
       const InsurancePage(), // 保险页面
       const PlanningPage(), // 财务规划页面
       const ProfilePage(), // 个人中心页面
     ];
+    
+    debugPrint('===> HomePage: _updatePages completed, showing: ${shouldShowConversation ? "ConversationPage" : "DefaultChatPage"}');
   }
 
-  /// 处理开始对话的回调
-  void _handleStartConversation(String conversationId, String initialQuestion) {
-    debugPrint('===> HomePage: 开始对话回调 - conversationId: "$conversationId", initialQuestion: "$initialQuestion"');
+  /// 处理AI模块选择的回调
+  void _handleModuleSelected(dynamic module) {
+    debugPrint('===> HomePage: AI模块选择回调 - module: ${module.toString()}');
     
     setState(() {
-      // 对于新会话，conversationId可能为空，这是正常情况
-      // 只有在有明确conversationId时才设置，否则保持为null表示新会话
-      _currentConversationId = conversationId.isNotEmpty ? conversationId : null;
-      _currentInitialQuestion = initialQuestion;
-      
-      debugPrint('===> HomePage: 更新状态 - _currentConversationId: $_currentConversationId, _currentInitialQuestion: $_currentInitialQuestion');
+      // 显示对话页面（不传递任何初始参数，让ConversationPage显示欢迎视图）
+      _showConversationPage = true;
+      _currentConversationId = null;
+      _currentInitialQuestion = null;
+      _currentProductInfo = null;
       
       _updatePages();
     });
   }
+
 
   /// 清除初始数据，防止重复发送
   void _clearInitialData() {
@@ -182,12 +192,15 @@ class _HomePageState extends State<HomePage> with RouteAware {
 
   /// 重置到默认聊天页面
   void resetToDefaultChat() {
+    debugPrint('===> HomePage: resetToDefaultChat called');
     setState(() {
+      _showConversationPage = false;
       _currentConversationId = null;
       _currentInitialQuestion = null;
       _currentProductInfo = null;
       _updatePages();
     });
+    debugPrint('===> HomePage: resetToDefaultChat completed, _showConversationPage: $_showConversationPage');
   }
 
   @override

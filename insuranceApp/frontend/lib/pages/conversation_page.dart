@@ -7,6 +7,7 @@ import '../models/insurance_product.dart';
 import '../services/chat_service.dart';
 import '../widgets/ai_welcome_view.dart';
 import '../widgets/chat_message_item.dart';
+import 'menu_page.dart';
 
 /// 会话详情页面
 /// 显示与AI助手的对话内容
@@ -17,6 +18,7 @@ class ConversationPage extends StatefulWidget {
   final VoidCallback? onInitialQuestionSent;
   final VoidCallback? onNewConversation; // 新增回调
   final Function(String conversationId)? onConversationCreated; // 新增：会话创建回调
+  final VoidCallback? onBack; // 新增：返回回调
 
   const ConversationPage({
     Key? key,
@@ -26,6 +28,7 @@ class ConversationPage extends StatefulWidget {
     this.onInitialQuestionSent,
     this.onNewConversation,
     this.onConversationCreated,
+    this.onBack,
   }) : super(key: key);
 
   @override
@@ -38,6 +41,8 @@ class _ConversationPageState extends State<ConversationPage> {
   bool _isLoading = true;
   bool _hasProductInfo = false;
   bool _hasInitialQuestionSent = false; // 跟踪是否已经发送过初始问题
+  bool _showWelcomeView = true; // 控制是否显示欢迎视图
+  ChatService? _chatService; // 缓存ChatService引用
   
   @override
   void initState() {
@@ -62,11 +67,18 @@ class _ConversationPageState extends State<ConversationPage> {
   }
   
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 在这里安全地获取ChatService引用
+    _chatService = Provider.of<ChatService>(context, listen: false);
+  }
+
+  @override
   void dispose() {
     // 当页面销毁时，自动终止正在进行的对话响应
-    final chatService = Provider.of<ChatService>(context, listen: false);
-    if (chatService.isSending) {
-      chatService.stopResponse();
+    // 使用缓存的ChatService引用，避免在dispose中查找provider
+    if (_chatService?.isSending == true) {
+      _chatService?.stopResponse();
     }
     
     _messageController.dispose();
@@ -116,8 +128,14 @@ class _ConversationPageState extends State<ConversationPage> {
         // 这里不需要手动设置建议问题，ChatService会处理
       }
       
+      // 检查是否有现有消息，如果有则不显示欢迎视图
+      if (chatService.messages.isNotEmpty) {
+        _showWelcomeView = false;
+      }
+
       // 如果有初始问题，在页面加载完成后自动发送
       if (widget.initialQuestion != null && widget.initialQuestion!.isNotEmpty && !_hasInitialQuestionSent) {
+        _showWelcomeView = false; // 有初始问题时不显示欢迎视图
         // 使用微延迟确保UI已经完成渲染
         Future.delayed(const Duration(milliseconds: 300), () {
           if (mounted) {
@@ -177,6 +195,13 @@ class _ConversationPageState extends State<ConversationPage> {
   Future<void> _sendMessage() async {
     final message = _messageController.text.trim();
     if (message.isEmpty) return;
+    
+    // 隐藏欢迎视图
+    if (_showWelcomeView) {
+      setState(() {
+        _showWelcomeView = false;
+      });
+    }
     
     // 检查是否是初始问题，如果是则标记为已发送
     final isInitialQuestion = message == widget.initialQuestion;
@@ -287,27 +312,46 @@ class _ConversationPageState extends State<ConversationPage> {
     
     return Scaffold(
       appBar: AppBar(
-        // 让AppBar自动处理leading按钮，如果可以pop则显示返回按钮，否则显示自定义菜单按钮
-        leading: Navigator.canPop(context) 
-            ? null // 使用系统默认的返回按钮
-            : IconButton(
-                icon: const Icon(Icons.menu),
-                onPressed: () {
-                  // 导航到菜单页面
-                  Navigator.pushNamed(context, '/menu');
-                },
-              ),
+        backgroundColor: const Color(0xFF6A1B9A),
+        foregroundColor: Colors.white,
+        elevation: 1,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios),
+          onPressed: () {
+            // 如果有返回回调，使用回调；否则使用默认的 Navigator.pop
+            if (widget.onBack != null) {
+              widget.onBack!();
+            } else {
+              Navigator.of(context).pop();
+            }
+          },
+        ),
         title: Consumer<ChatService>(
           builder: (context, chatService, child) {
             final conversation = chatService.currentConversation;
+            final selectedModule = chatService.selectedModule;
             return Text(
-              conversation?.name ?? '新对话',
-              style: const TextStyle(color: Colors.white),
+              conversation?.name ?? selectedModule?.appInfo?.name ?? '智能助手',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
             );
           },
         ),
         actions: [
-          // 右侧新建对话按钮
+          // 菜单按钮
+          IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const MenuPage(),
+                ),
+              );
+            },
+          ),
+          // 新建对话按钮
           IconButton(
             icon: const Icon(Icons.add_circle_outline),
             onPressed: _createNewConversation,
@@ -339,9 +383,15 @@ class _ConversationPageState extends State<ConversationPage> {
       builder: (context, chatService, child) {
         final messages = chatService.messages;
         final suggestedQuestions = chatService.suggestedQuestions;
+        final selectedModule = chatService.selectedModule;
+        
+        // 如果没有消息且应该显示欢迎视图
+        if (messages.isEmpty && _showWelcomeView && selectedModule != null) {
+          return _buildWelcomeView(selectedModule);
+        }
         
         if (messages.isEmpty) {
-          // 简化的空状态显示，不再显示完整的欢迎视图
+          // 简化的空状态显示
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -539,6 +589,53 @@ class _ConversationPageState extends State<ConversationPage> {
           ),
         );
       },
+    );
+  }
+
+  /// 构建欢迎视图
+  Widget _buildWelcomeView(AIModule module) {
+    final parameters = module.parameters;
+    final appInfo = module.appInfo;
+
+    if (parameters == null || appInfo == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              color: Theme.of(context).primaryColor,
+            ),
+            const SizedBox(height: 16),
+            const Text('加载AI模块信息...'),
+          ],
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: AIWelcomeView(
+        moduleName: appInfo.name,
+        parameters: parameters,
+        onSubmit: (formData) async {
+          // 处理表单提交
+          if (formData.containsKey('question')) {
+            _messageController.text = formData['question']!;
+            await _sendMessage();
+            return;
+          }
+          
+          // 拼接表单数据为消息
+          final message = formData.entries
+              .map((entry) => '${entry.key}: ${entry.value}')
+              .join('\n');
+          
+          if (message.isNotEmpty) {
+            _messageController.text = message;
+            await _sendMessage();
+          }
+        },
+      ),
     );
   }
   
