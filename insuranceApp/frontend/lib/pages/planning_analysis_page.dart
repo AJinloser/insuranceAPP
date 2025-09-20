@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../services/goal_service.dart';
 import '../models/goal.dart';
+import '../widgets/guidance_widgets.dart';
 
 class PlanningAnalysisPage extends StatefulWidget {
   const PlanningAnalysisPage({Key? key}) : super(key: key);
@@ -76,7 +77,7 @@ class _PlanningAnalysisPageState extends State<PlanningAnalysisPage> {
         double completedAmount = 0.0;
         
         for (final goal in goals) {
-          for (final subTask in goal.subTasks ?? []) {
+          for (final subTask in goal.subTasks) {
             plannedAmount += subTask.subTaskAmount ?? 0.0;
             if (subTask.subTaskStatus == true) {
               completedAmount += subTask.subTaskAmount ?? 0.0;
@@ -107,16 +108,31 @@ class _PlanningAnalysisPageState extends State<PlanningAnalysisPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildPieChart(),
-            const SizedBox(height: 32),
-            _buildLineChart(),
-          ],
-        ),
+      body: Consumer<GoalService>(
+        builder: (context, goalService, child) {
+          final hasGoals = goalService.goals.isNotEmpty;
+          
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 引导性内容（始终显示）
+                _buildAnalysisGuidanceContent(),
+                const SizedBox(height: 24),
+                
+                // 图表内容或空状态
+                if (hasGoals) ...[
+                  _buildPieChart(),
+                  const SizedBox(height: 32),
+                  _buildLineChart(),
+                ] else ...[
+                  _buildEmptyAnalysisState(),
+                ],
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -217,6 +233,79 @@ class _PlanningAnalysisPageState extends State<PlanningAnalysisPage> {
     );
   }
 
+  /// 构建规划分析页面的引导性内容
+  Widget _buildAnalysisGuidanceContent() {
+    return Column(
+      children: [
+        // 欢迎卡片
+        GuidanceWidgets.buildWelcomeCard(
+          context: context,
+          title: '财务规划分析',
+          subtitle: '通过可视化图表分析您的财务目标分配和完成进度，让规划更加直观',
+          icon: Icons.analytics_outlined,
+        ),
+        const SizedBox(height: 16),
+        
+        // 功能介绍卡片
+        GuidanceWidgets.buildFeaturesCard(
+          title: '分析功能说明',
+          features: [
+            FeatureItem(
+              icon: Icons.pie_chart,
+              title: '目标分配图',
+              description: '环状图显示各目标的金额占比，点击查看子目标分解',
+              color: Colors.blue,
+            ),
+            FeatureItem(
+              icon: Icons.show_chart,
+              title: '进度趋势图',
+              description: '折线图追踪预计完成与实际完成的对比趋势',
+              color: Colors.green,
+            ),
+            FeatureItem(
+              icon: Icons.insights,
+              title: '数据洞察',
+              description: '通过数据分析发现规划中的问题，优化目标设定',
+              color: Colors.orange,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// 构建空状态分析页面
+  Widget _buildEmptyAnalysisState() {
+    return Column(
+      children: [
+        GuidanceWidgets.buildHelpTipCard(
+          title: '开始数据分析',
+          description: '前往"目标"页面创建您的第一个财务目标，然后回到这里查看分析图表',
+          icon: Icons.lightbulb_outline,
+          color: Theme.of(context).primaryColor,
+        ),
+        const SizedBox(height: 24),
+        
+        // 空状态的图表预览
+        _buildEmptyChartPreviews(),
+      ],
+    );
+  }
+
+  /// 构建空状态图表预览
+  Widget _buildEmptyChartPreviews() {
+    return Column(
+      children: [
+        // 空的饼图
+        _buildEmptyPieChart(),
+        const SizedBox(height: 32),
+        
+        // 空的折线图
+        _buildEmptyLineChart(),
+      ],
+    );
+  }
+
   Widget _buildEmptyPieChart() {
     return Card(
       elevation: 4,
@@ -232,19 +321,21 @@ class _PlanningAnalysisPageState extends State<PlanningAnalysisPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              '暂无目标数据',
+              '目标分配概览',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
                 color: Colors.grey[600],
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              '设定目标后查看分配情况',
+              '设定目标后查看各目标的金额分配情况',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[500],
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -376,7 +467,7 @@ class _PlanningAnalysisPageState extends State<PlanningAnalysisPage> {
 
   List<PieChartSectionData> _buildSubGoalPieSections(List<Goal> goals) {
     final selectedGoal = goals.firstWhere((g) => g.goalId == _selectedGoalId);
-    final subGoals = selectedGoal.subGoals ?? [];
+    final subGoals = selectedGoal.subGoals;
     
     final colors = [
       Colors.lightBlue,
@@ -469,7 +560,7 @@ class _PlanningAnalysisPageState extends State<PlanningAnalysisPage> {
 
   Widget _buildSubGoalLegend(List<Goal> goals) {
     final selectedGoal = goals.firstWhere((g) => g.goalId == _selectedGoalId);
-    final subGoals = selectedGoal.subGoals ?? [];
+    final subGoals = selectedGoal.subGoals;
     
     final colors = [
       Colors.lightBlue,
@@ -649,17 +740,17 @@ class _PlanningAnalysisPageState extends State<PlanningAnalysisPage> {
                   color: Colors.green[600],
                 ),
               ),
-              if (goal.subGoals?.isNotEmpty == true) ...[
+              if (goal.subGoals.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Text(
-                  '子目标数量: ${goal.subGoals?.length ?? 0}',
+                  '子目标数量: ${goal.subGoals.length}',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[600],
                   ),
                 ),
               ],
-              if (goal.subTasks?.isNotEmpty == true) ...[
+              if (goal.subTasks.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(
                   '子任务: ${goal.subTaskCompletedNum}/${goal.subTaskNum} 已完成',
@@ -796,31 +887,39 @@ class _PlanningAnalysisPageState extends State<PlanningAnalysisPage> {
   }
 
   Widget _buildEmptyLineChart() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          Icons.show_chart,
-          size: 80,
-          color: Colors.grey[400],
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          children: [
+            Icon(
+              Icons.show_chart,
+              size: 80,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '完成进度趋势',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '完成任务后查看预计进度与实际进度的对比趋势',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
-        const SizedBox(height: 16),
-        Text(
-          '暂无进度数据',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.grey[600],
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          '完成任务后查看进度趋势',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[500],
-          ),
-        ),
-      ],
+      ),
     );
   }
 

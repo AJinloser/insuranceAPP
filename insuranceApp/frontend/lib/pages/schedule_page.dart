@@ -5,6 +5,7 @@ import 'package:table_calendar/table_calendar.dart';
 import '../services/goal_service.dart';
 import '../models/goal.dart';
 import '../widgets/schedule_item_card.dart';
+import '../widgets/guidance_widgets.dart';
 
 class SchedulePage extends StatefulWidget {
   const SchedulePage({Key? key}) : super(key: key);
@@ -126,7 +127,17 @@ class _SchedulePageState extends State<SchedulePage> {
       backgroundColor: Colors.grey[50],
       body: Column(
         children: [
-          // 日历组件
+          // 引导性内容（仅在空状态时显示，且高度受限）
+          if (_scheduleGoals.isEmpty && !_isLoading)
+            SizedBox(
+              height: 180, // 限制引导内容高度
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: _buildScheduleGuidanceHeader(),
+              ),
+            ),
+          
+          // 日历组件（始终显示）
           Container(
             margin: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -212,7 +223,7 @@ class _SchedulePageState extends State<SchedulePage> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _scheduleGoals.isEmpty
-                    ? _buildEmptyState()
+                    ? _buildEmptyStateWithGuidance()
                     : _buildScheduleList(),
           ),
         ],
@@ -220,32 +231,54 @@ class _SchedulePageState extends State<SchedulePage> {
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
+
+  /// 构建日程页面的头部引导内容
+  Widget _buildScheduleGuidanceHeader() {
+    return GuidanceWidgets.buildFeaturesCard(
+      title: '日程管理功能',
+      features: [
+        FeatureItem(
+          icon: Icons.calendar_month,
+          title: '日程查看',
+          description: '通过日历选择日期，查看当天的目标和任务安排',
+          color: Colors.blue,
+        ),
+        FeatureItem(
+          icon: Icons.edit_calendar,
+          title: '日期调整',
+          description: '右滑任务可修改截止日期，灵活调整计划',
+          color: Colors.green,
+        ),
+        FeatureItem(
+          icon: Icons.check_circle,
+          title: '任务完成',
+          description: '点击复选框标记任务完成，实时更新进度',
+          color: Colors.orange,
+        ),
+      ],
+    );
+  }
+
+  /// 构建空状态时的引导
+  Widget _buildEmptyStateWithGuidance() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.event_busy,
-            size: 64,
-            color: Colors.grey[400],
+          // 操作指引
+          GuidanceWidgets.buildHelpTipCard(
+            title: '如何使用日程管理',
+            description: '1. 先在"目标"页面创建目标和任务\n2. 选择日历上的日期查看当天安排\n3. 右滑任务可修改日期，点击复选框完成任务',
+            icon: Icons.help_outline,
+            color: Theme.of(context).primaryColor,
           ),
-          const SizedBox(height: 16),
-          Text(
-            '这一天没有安排',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '选择其他日期查看安排',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
-            ),
+          const SizedBox(height: 20),
+          
+          // 空状态显示
+          GuidanceWidgets.buildEmptyStateGuidance(
+            icon: Icons.event_busy,
+            title: '这一天没有安排',
+            subtitle: '选择其他日期查看安排，或者前往"目标"页面添加新的目标和任务',
           ),
         ],
       ),

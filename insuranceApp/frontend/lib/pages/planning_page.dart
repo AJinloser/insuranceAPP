@@ -4,6 +4,7 @@ import '../services/goal_service.dart';
 import '../models/goal.dart';
 import 'goal_detail_page.dart';
 import '../widgets/goal_card.dart';
+import '../widgets/guidance_widgets.dart';
 import 'schedule_page.dart';
 import 'planning_analysis_page.dart';
 
@@ -126,20 +127,24 @@ class _PlanningPageState extends State<PlanningPage> with TickerProviderStateMix
         }
 
         if (goalService.goals.isEmpty) {
-          return _buildEmptyState();
+          return _buildEmptyStateWithGuidance();
         }
 
         return RefreshIndicator(
           onRefresh: _loadGoals,
           child: ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: goalService.goals.length + 1, // +1 for add button
+            itemCount: goalService.goals.length + 2, // +2 for guidance and add button
             itemBuilder: (context, index) {
-              if (index == goalService.goals.length) {
+              if (index == 0) {
+                return _buildGoalsGuidanceContent();
+              }
+              
+              if (index == goalService.goals.length + 1) {
                 return _buildAddGoalCard();
               }
               
-              final goal = goalService.goals[index];
+              final goal = goalService.goals[index - 1];
               return GoalCard(
                 goal: goal,
                 onTap: () => _navigateToGoalDetail(goal),
@@ -153,44 +158,71 @@ class _PlanningPageState extends State<PlanningPage> with TickerProviderStateMix
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
+  /// 构建目标页面的引导性内容
+  Widget _buildGoalsGuidanceContent() {
+    return Column(
+      children: [
+        // 欢迎卡片
+        GuidanceWidgets.buildWelcomeCard(
+          context: context,
+          title: '财务目标规划',
+          subtitle: '设定明确的财务目标，制定实现计划，跟踪进度让理财更有方向',
+          icon: Icons.flag_outlined,
+        ),
+        const SizedBox(height: 16),
+        
+        // 功能介绍卡片
+        GuidanceWidgets.buildFeaturesCard(
+          title: '目标管理功能',
+          features: [
+            FeatureItem(
+              icon: Icons.add_circle_outline,
+              title: '设定目标',
+              description: '添加具体的财务目标，设置目标金额和完成时间',
+              color: Colors.blue,
+            ),
+            FeatureItem(
+              icon: Icons.work_outline,
+              title: '子目标规划',
+              description: '将大目标分解为可管理的子目标和具体任务',
+              color: Colors.green,
+            ),
+            FeatureItem(
+              icon: Icons.trending_up,
+              title: '进度跟踪',
+              description: '实时查看目标完成进度，调整计划确保达成',
+              color: Colors.orange,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        
+        // 快速操作提示
+        GuidanceWidgets.buildHelpTipCard(
+          title: '开始您的第一个目标',
+          description: '点击下方"添加目标"按钮，设定您的财务目标',
+          icon: Icons.lightbulb_outline,
+          color: Theme.of(context).primaryColor,
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  /// 构建空状态时的引导
+  Widget _buildEmptyStateWithGuidance() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.flag_outlined,
-            size: 64,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '还没有设定目标',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '设定你的第一个目标，开始规划你的财务未来',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: _addNewGoal,
-            icon: const Icon(Icons.add),
-            label: const Text('添加目标'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
+          _buildGoalsGuidanceContent(),
+          GuidanceWidgets.buildEmptyStateGuidance(
+            icon: Icons.flag_outlined,
+            title: '还没有设定目标',
+            subtitle: '设定你的第一个目标，开始规划你的财务未来',
+            buttonText: '添加目标',
+            onButtonPressed: _addNewGoal,
+            primaryColor: Theme.of(context).primaryColor,
           ),
         ],
       ),
