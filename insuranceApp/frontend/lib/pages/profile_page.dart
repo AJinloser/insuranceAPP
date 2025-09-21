@@ -8,6 +8,7 @@ import '../services/developer_service.dart';
 import '../widgets/developer_password_dialog.dart';
 import 'profile_edit_page.dart';
 import 'privacy_policy_page.dart';
+import 'disclaimer_page.dart';
 import 'help_page.dart';
 import 'developer_page.dart';
 
@@ -278,8 +279,10 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         const SizedBox(height: 12),
         _buildDeveloperCard(context),
-        const SizedBox(height: 24), // 增加间距，将隐私政策与其他按钮隔开
-        _buildPrivacyPolicyCard(context), // 单独构建隐私政策卡片
+        const SizedBox(height: 24), // 增加间距，将法律文档与其他按钮隔开
+        _buildDisclaimerCard(context), // 免责声明卡片
+        const SizedBox(height: 12),
+        _buildPrivacyPolicyCard(context), // 隐私政策卡片
       ],
     );
   }
@@ -299,6 +302,78 @@ class _ProfilePageState extends State<ProfilePage> {
         subtitle: const Text('访问开发者功能和设置'),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: () => _showDeveloperPasswordDialog(context),
+      ),
+    );
+  }
+
+  Widget _buildDisclaimerCard(BuildContext context) {
+    return Card(
+      elevation: 3, // 稍微增加阴影以突出重要性
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Colors.orange.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(20), // 增加内边距使按钮更大
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const DisclaimerPage(),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.gavel_outlined,
+                  color: Colors.orange[700],
+                  size: 28, // 增大图标尺寸
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '免责声明',
+                      style: TextStyle(
+                        fontSize: 18, // 增大字体
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange[700],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '了解平台使用条款和责任限制',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 18,
+                color: Colors.orange[700],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
