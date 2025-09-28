@@ -41,7 +41,7 @@ class _HomePageState extends State<HomePage> with RouteAware {
   // 标题列表
   final List<String> _titles = const [
     '智能助手',
-    '保险服务',
+    '保险知识',
     '财务规划',
     '个人中心',
   ];

@@ -56,7 +56,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       tabIndex: 0,
     ),
     ModuleInfo(
-      title: '保险服务',
+      title: '保险知识',
       description: '浏览和比较保险产品',
       icon: Icons.shield_outlined,
       color: Color(0xFF2196F3),

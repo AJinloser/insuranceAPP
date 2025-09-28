@@ -11,7 +11,7 @@ class InsurancePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('保险服务'),
+        title: const Text('保险知识'),
         backgroundColor: Theme.of(context).primaryColor,
         elevation: 0,
         foregroundColor: Colors.white,
@@ -73,7 +73,7 @@ class InsurancePage extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    '保险服务中心',
+                    '保险知识中心',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,

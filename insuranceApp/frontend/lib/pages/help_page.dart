@@ -175,7 +175,7 @@ class HelpPage extends StatelessWidget {
                   const TextSpan(text: '本应用分为四个主要页面模块：'),
                   TextSpan(text: '智能助手', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
                   const TextSpan(text: '、'),
-                  TextSpan(text: '保险服务', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange.shade700)),
+                  TextSpan(text: '保险知识', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange.shade700)),
                   const TextSpan(text: '、'),
                   TextSpan(text: '财务规划', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade700)),
                   const TextSpan(text: '、'),
@@ -188,7 +188,7 @@ class HelpPage extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             _buildFeatureItem(Icons.smart_toy, '智能助手', 'AI聊天助手，提供专业建议', Colors.blue),
-            _buildFeatureItem(Icons.shield, '保险服务', '查看保险产品，管理保单', Colors.orange),
+            _buildFeatureItem(Icons.shield, '保险知识', '查看保险产品，管理保单', Colors.orange),
             _buildFeatureItem(Icons.trending_up, '财务规划', '设定目标，规划未来', Colors.green),
             _buildFeatureItem(Icons.person, '个人中心', '管理个人信息和设置', Colors.purple),
           ],
@@ -266,7 +266,7 @@ class HelpPage extends StatelessWidget {
                 Icon(Icons.shield, color: Colors.orange.shade600, size: 28),
                 const SizedBox(width: 12),
                 const Text(
-                  '保险服务页面',
+                  '保险知识页面',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -277,7 +277,7 @@ class HelpPage extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             const Text(
-              '在保险服务页面，您可以查看我们数据库中拥有的各种保险产品，点击后可以进入保险产品详情页面，了解关于该保险产品保费、保障条款等各种详细信息。',
+              '在保险知识页面，您可以查看我们数据库中拥有的各种保险产品，点击后可以进入保险产品详情页面，了解关于该保险产品保费、保障条款等各种详细信息。',
               style: TextStyle(fontSize: 15, height: 1.5),
             ),
             const SizedBox(height: 16),
@@ -320,7 +320,7 @@ class HelpPage extends StatelessWidget {
             const SizedBox(height: 16),
             _buildDetailedFeature(
               '搜索和筛选功能',
-              '您也可以通过保险服务页面中的搜索框通过保险产品的名称进行搜索，或点击重置按钮重置为初始状态（展示所有保险产品）',
+              '您也可以通过保险知识页面中的搜索框通过保险产品的名称进行搜索，或点击重置按钮重置为初始状态（展示所有保险产品）',
               Icons.search,
             ),
             const SizedBox(height: 12),
@@ -338,7 +338,7 @@ class HelpPage extends StatelessWidget {
             const SizedBox(height: 12),
             _buildDetailedFeature(
               '我的保单管理',
-              '您可以点击保险服务页面底部的保单卡片，进入保单页面，查看您的保单目前拥有的保险产品，也可以点击底部的保单分析按钮，与AI助手聊天，了解您目前保单的涵盖范围，缺陷和优化方向。',
+              '您可以点击保险知识页面底部的保单卡片，进入保单页面，查看您的保单目前拥有的保险产品，也可以点击底部的保单分析按钮，与AI助手聊天，了解您目前保单的涵盖范围，缺陷和优化方向。',
               Icons.list_alt,
             ),
           ],
