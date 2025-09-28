@@ -99,6 +99,20 @@ class ChatMessageItem extends StatelessWidget {
                   ),
                 ),
                 
+                // AI免责声明（仅AI消息且回答完成时显示）
+                if (!isUserMessage && message.answer != null && message.answer!.isNotEmpty && !isResponding)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6.0),
+                    child: Text(
+                      '本回答由AI生成，内容仅供参考，请仔细甄别',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[500],
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+                
                 // 消息操作按钮（仅AI消息）
                 if (!isUserMessage && message.answer != null && message.answer!.isNotEmpty)
                   Padding(
