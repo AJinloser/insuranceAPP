@@ -6,10 +6,12 @@ from sqlalchemy import text, inspect
 from app.db.base import Base, engine
 from app.db.sql_importer import SQLImporter
 from app.db.migration import run_database_migration
+from app.db.importers import import_basic_medical_insurance_data
 from app.models.user import User
 from app.models.user_info import UserInfo
 from app.models.insurance_list import InsuranceList
 from app.models.goal import Goal
+from app.models.basic_medical_insurance import BasicMedicalInsurance
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +97,18 @@ def init_db(db: Session) -> None:
     insurance_tables = [table for table in all_tables if "insurance" in table.lower()]
     
     logger.info(f"数据库中的保险相关表 ({len(insurance_tables)}): {', '.join(insurance_tables)}")
+    
+    # 导入基本医保数据
+    logger.info("导入基本医保数据...")
+    excel_path = base_dir / "datas" / "基本医保.xlsx"
+    if excel_path.exists():
+        success = import_basic_medical_insurance_data(db, str(excel_path))
+        if success:
+            logger.info("基本医保数据导入成功")
+        else:
+            logger.error("基本医保数据导入失败")
+    else:
+        logger.warning(f"基本医保数据文件不存在: {excel_path}")
     
     # 添加测试用户，如果不存在
     create_test_user(db)

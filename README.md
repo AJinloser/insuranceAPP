@@ -18,6 +18,8 @@ insuranceApp/
 │   │   └── schemas/ # 数据架构
 │   ├── sql/         # 保险产品sql文件
 │   │   ├── 表说明.md # 表说明，说明各个sql文件的内容和表格式
+│   ├── datas/       # 数据文件
+│   │   └── 基本医保.xlsx # 基本医保数据文件
 │   ├── tests/       # 测试
 │   ├── Dockerfile   # Docker配置
 │   ├── pyproject.toml # Python项目配置
@@ -554,6 +556,28 @@ insuranceApp/
         - code:状态码
         - message: 通过id更新子任务状态成功或失败信息
 
+- 基本医保查询API
+    - 请求方式：GET
+    - 请求路径：/basic_medical_insurance/query
+    - 请求参数：
+        - city: 城市名称
+        - category: 种类（城镇职工/城乡居民）
+        - employment_status: 在职/退休状态（仅在种类为城镇职工时有效，可选）
+    - 后端根据城市匹配基本医保表中的城市字段，然后根据种类和在职/退休状态过滤相关字段
+    - 返回体：
+        - code: 状态码
+        - message: 查询成功或失败信息
+        - data: 过滤后的基本医保数据（中文字段名）
+
+- 获取基本医保城市列表API
+    - 请求方式：GET
+    - 请求路径：/basic_medical_insurance/cities
+    - 返回体：
+        - code: 状态码
+        - message: 获取城市列表成功或失败信息
+        - cities: 城市名称列表
+        - count: 城市数量
+
 ### 后端数据库
 - 目前先采用postgresql数据库
 - 数据库表结构
@@ -629,3 +653,28 @@ insuranceApp/
                 - sub_task_status: 子任务状态（表明是否完成）
                 - sub_task_completion_time: 子任务预计完成时间（格式为YYYY-MM-DD）
                 - sub_task_amount: 子任务金额
+
+    - 基本医保表（用于存储各城市基本医保政策信息）
+        - id: 主键ID
+        - city: 城市名称（索引字段）
+        - data_year: 数据年份
+        - coordination_level: 统筹层次
+        - official_website: 官网链接
+        - policy_document_number: 政策文件号
+        - 职工相关字段：
+            - employee_contribution_base_lower: 职工_缴费基数下限
+            - employee_contribution_base_upper: 职工_缴费基数上限
+            - employee_unit_contribution_rate: 职工_单位缴费比例
+            - employee_personal_contribution_rate: 职工_个人缴费比例
+        - 居民相关字段：
+            - resident_personal_contribution_standard: 居民_个人缴费标准
+            - resident_financial_subsidy_standard: 居民_财政补助标准
+        - 在职相关字段：
+            - active_employee_account_transfer_rate: 在职_职工划入比例
+            - active_outpatient_payment_ratio: 在职_门诊支付比例
+            - active_segment1-4相关字段: 在职分段支付比例
+        - 退休相关字段：
+            - retired_employee_account_fixed_amount: 退休_职工划入定额
+            - retired_outpatient_payment_ratio: 退休_门诊支付比例
+            - retired_segment1-4相关字段: 退休分段支付比例
+        - 其他政策字段：包括大病保险、异地就医、长期护理保险等相关字段

@@ -8,6 +8,7 @@ services:
     volumes:
       - ./app:/app/app
       - ./sql:/app/sql
+      - ./datas:/app/datas
       - ./.env:/app/.env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/insurance_app
