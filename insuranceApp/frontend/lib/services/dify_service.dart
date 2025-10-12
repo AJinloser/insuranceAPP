@@ -1,11 +1,9 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
 
 import '../models/dify_models.dart';
 import '../utils/error_logger.dart';
@@ -22,7 +20,7 @@ class DifyService {
   factory DifyService() => _instance;
   
   DifyService._internal() {
-    _baseUrl = dotenv.env['DIFY_API_BASE_URL'] ?? 'http://47.76.197.193/v1';
+    _baseUrl = dotenv.env['DIFY_API_BASE_URL'] ?? 'http://skysail.top/v1';
     _apiKey = dotenv.env['DIFY_API_KEY'] ?? '';
     
     _dio = Dio(
@@ -247,85 +245,6 @@ class DifyService {
       
       return ChatMessage.fromJson(response.data);
     } catch (e) {
-      throw _handleError(e);
-    }
-  }
-  
-  /// 发送消息（流式模式）
-  Stream<StreamResponse> sendMessageStream({
-    required String query,
-    required String userId,
-    String? conversationId,
-    Map<String, dynamic>? inputs,
-    List<FileItem>? files,
-    bool? autoGenerateName,
-  }) async* {
-    try {
-      final Map<String, dynamic> data = {
-        'query': query,
-        'inputs': inputs ?? {},
-        'user': userId,
-        'response_mode': 'streaming',
-      };
-      
-      if (conversationId != null) {
-        data['conversation_id'] = conversationId;
-      }
-      
-      if (inputs != null) {
-        data['inputs'] = inputs;
-      }
-      
-      if (files != null) {
-        data['files'] = files.map((file) => file.toJson()).toList();
-      }
-      
-      if (autoGenerateName != null) {
-        data['auto_generate_name'] = autoGenerateName;
-      }
-      
-      // 使用http包实现SSE流式请求
-      final client = http.Client();
-      final request = http.Request('POST', Uri.parse('$_baseUrl/chat-messages'));
-      request.headers['Content-Type'] = 'application/json';
-      request.headers['Accept'] = 'text/event-stream';
-      request.headers['Authorization'] = 'Bearer $_apiKey';
-      request.body = jsonEncode(data);
-      
-      final streamedResponse = await client.send(request);
-      
-      if (streamedResponse.statusCode != 200) {
-        final response = await http.Response.fromStream(streamedResponse);
-        throw DifyApiException(
-          statusCode: streamedResponse.statusCode,
-          message: response.body,
-        );
-      }
-      
-      await for (final chunk in streamedResponse.stream.transform(utf8.decoder)) {
-        // 处理SSE格式的响应
-        for (final line in chunk.split('\n\n')) {
-          if (line.startsWith('data: ')) {
-            final jsonStr = line.substring(6).trim();
-            if (jsonStr.isNotEmpty) {
-              try {
-                final json = jsonDecode(jsonStr);
-                yield StreamResponse.fromJson(json);
-              } catch (e) {
-                debugPrint('Error parsing SSE data: $e');
-              }
-            }
-          }
-        }
-      }
-    } catch (e) {
-      await logApiError(
-        message: '发送消息流式模式失败: $e',
-        userId: userId,
-        apiEndpoint: '/chat-messages',
-        serviceName: 'DifyService',
-        stackTrace: e.toString(),
-      );
       throw _handleError(e);
     }
   }
