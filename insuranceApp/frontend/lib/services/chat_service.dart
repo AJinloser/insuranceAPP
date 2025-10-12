@@ -905,7 +905,7 @@ class ChatService with ChangeNotifier {
   // 获取AI模块的参数
   Future<AppParameters?> getAIModuleParameters(String apiKey) async {
     try {
-      final difyBaseUrl = dotenv.env['DIFY_API_BASE_URL'] ?? 'http://47.76.197.193/v1';
+      final difyBaseUrl = dotenv.env['DIFY_API_BASE_URL'] ?? 'http://skysail.top/v1';
       final response = await http.get(
         Uri.parse('$difyBaseUrl/parameters'),
         headers: {
