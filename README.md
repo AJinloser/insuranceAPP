@@ -14,12 +14,18 @@ insuranceApp/
 │   │   ├── api/     # API路由
 │   │   ├── core/    # 核心配置
 │   │   ├── db/      # 数据库
+│   │   │   ├── crud/      # CRUD操作
+│   │   │   ├── importers/ # 数据导入器
+│   │   │   └── ...
 │   │   ├── models/  # 数据模型
 │   │   └── schemas/ # 数据架构
-│   ├── sql/         # 保险产品sql文件
-│   │   ├── 表说明.md # 表说明，说明各个sql文件的内容和表格式
 │   ├── datas/       # 数据文件
-│   │   └── 基本医保.xlsx # 基本医保数据文件
+│   │   ├── 基本医保.xlsx     # 基本医保数据文件
+│   │   ├── 定期寿险.xlsx     # 定期寿险产品数据
+│   │   ├── 非年金.xlsx       # 非年金产品数据
+│   │   ├── 年金.xlsx         # 年金产品数据
+│   │   ├── 医疗保险.xlsx     # 医疗保险产品数据
+│   │   └── 重疾险.xlsx       # 重疾险产品数据
 │   ├── tests/       # 测试
 │   ├── Dockerfile   # Docker配置
 │   ├── pyproject.toml # Python项目配置
@@ -292,56 +298,56 @@ insuranceApp/
 - 获取保险产品类型API
     - 请求方式：GET
     - 请求路径：/insurance_products/product_types
-    - 请求参数：
+    - 请求参数：无
     - 返回体：
         - code:状态码
         - message: 获取保险产品类型成功或失败信息
-        - product_types: 保险产品类型列表（现在包含定期寿险、定额终身寿险、意外险、年金险、重疾险、高端医疗险、百万医疗险及中端医疗险）
+        - product_types: 保险产品类型列表（包含：term_life（定期寿险）、non_annuity（非年金）、annuity（年金）、medical（医疗保险）、critical_illness（重疾险））
 
 - 获取保险产品类型对应字段API
     - 请求方式：GET
     - 请求路径：/insurance_products/product_fields
     - 请求参数：
-        - product_type: 产品类型
+        - product_type: 产品类型（表名后缀，如term_life、medical等）
     - 返回体：
         - code:状态码
         - message: 获取保险产品类型对应字段成功或失败信息
-        - fields: 保险产品类型对应字段列表
+        - fields: 保险产品类型对应字段列表，每个字段包含：
+            - name: 字段名（英文）
+            - type: 数据类型
+            - description: 字段说明（中文）
 
 
 - 保险产品搜索API
     - 请求方式：GET
     - 请求路径：/insurance_products/search
     - 请求参数：
-        - product_type: 产品类型
-        - page:页码
-        - limit:每页条数
-        - sort_by: 排序字段,默认按照total_score排序
-        - 上面的字段为必填字段，下面的字段为可选字段（用于搜索和筛选），按照不同的产品类型会有不用的字段类型，可选字段可以为空，为空时表示不针对这一字段进行筛选；可以为范围类型，由后端筛选范围内的产品；可以不完全匹配，由后端根据模糊匹配进行筛选
-        - 可选字段具体参照~/insuranceApp/backend/sql/表说明.md,其中详细写了各个字段的类型和含义
+        - product_type: 产品类型（必填，表名后缀）
+        - page: 页码（必填，默认1）
+        - limit: 每页条数（必填，默认10）
+        - sort_by: 排序字段（可选，为空则按数据库默认顺序）
+        - sort_order: 排序方向（可选，asc或desc，默认desc）
+        - 其他可选筛选参数：根据不同产品类型有不同的字段可用于筛选
+            - 数值类型字段：支持精确匹配或范围筛选（使用字段名_min和字段名_max）
+            - BOOLEAN类型字段：支持是/否筛选
+            - 文本类型字段：支持模糊匹配
     - 返回体：
-        - code:状态码
+        - code: 状态码
         - message: 搜索成功或失败信息
         - pages: 总页数
-        - products: 保险产品列表
-            - product_id: 产品ID
-            - product_name: 产品名称
-            - company_name: 保险公司名称
-            - insurance_type: 保险类型
-            - premium: 保费
-            - total_score: 总评分
-        (不需要返回每个表的全部字段，只需要返回需要展示的字段即可)
+        - products: 保险产品列表（使用中文字段名返回，包含该产品类型的所有字段）
     
 - 具体保险产品信息查询API
     - 请求方式：GET
     - 请求路径：/insurance_products/product_info
     - 请求参数：
         - product_id: 产品ID
-        - product_type: 产品类型
+        - product_type: 产品类型（表名后缀）
     - 返回体：
-        - code:状态码
+        - code: 状态码
         - message: 查询成功或失败信息
-        - 其余字段根据~/insuranceApp/backend/sql/表说明.md中的表结构返回
+        - product_type: 产品类型
+        - 产品详细信息（使用中文字段名返回，包含该产品的所有字段）
 
 - 获取用户个人信息API
     - 请求方式：GET
@@ -586,10 +592,20 @@ insuranceApp/
         - account: 账号
         - password: 密码
 
-    - 保险产品表
-        - 从~/insuranceApp/backend/sql/表说明.md中获取表结构
-        - 从~/insuranceApp/backend/sql/*中获取sql文件
-        - 由于有7种保险产品，所以有7个表，每个表的表名和表结构在~/insuranceApp/backend/sql/表说明.md中都有说明
+    - 保险产品表（从xlsx文件导入）
+        - 保险产品数据存储在~/insuranceApp/backend/datas/目录下的xlsx文件中
+        - 包含5个产品类型表：
+            - insurance_products_term_life: 定期寿险表
+            - insurance_products_non_annuity: 非年金表
+            - insurance_products_annuity: 年金表
+            - insurance_products_medical: 医疗保险表
+            - insurance_products_critical_illness: 重疾险表
+        - 每个表的字段结构由对应xlsx文件的前三列定义：
+            - A列：字段名（英文）
+            - B列：字段说明（中文）
+            - C列：数据类型
+        - 所有表都包含product_id作为主键
+        - 数据从xlsx文件的D列开始，每列代表一个产品
 
     - 用户个人信息表（用于存储用户个人信息）
         所有字段都为jsonb类型,并且具体内容使用字符串存储

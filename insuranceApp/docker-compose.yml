@@ -24,7 +24,6 @@ services:
     restart: always
     volumes:
       - ./backend/app:/app/app
-      - ./backend/sql:/app/sql
       - ./backend/datas:/app/datas
       - ./backend/.env:/app/.env
     environment:
@@ -43,7 +42,6 @@ services:
     restart: always
     volumes:
       - postgres_data:/var/lib/postgresql/data/
-      - ./backend/sql:/docker-entrypoint-initdb.d/sql/
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres

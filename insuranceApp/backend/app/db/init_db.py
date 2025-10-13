@@ -4,9 +4,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text, inspect
 
 from app.db.base import Base, engine
-from app.db.sql_importer import SQLImporter
 from app.db.migration import run_database_migration
-from app.db.importers import import_basic_medical_insurance_data
+from app.db.importers import import_basic_medical_insurance_data, import_insurance_products_data
 from app.models.user import User
 from app.models.user_info import UserInfo
 from app.models.insurance_list import InsuranceList
@@ -66,30 +65,19 @@ def init_db(db: Session) -> None:
     logger.info("执行数据库迁移...")
     run_database_migration(db)
     
-    logger.info("导入SQL文件...")
-    # 获取SQL文件目录路径
+    logger.info("导入保险产品数据...")
+    # 获取数据文件目录路径
     base_dir = Path(__file__).resolve().parent.parent.parent
-    sql_dir = base_dir / "sql"
+    data_dir = base_dir / "datas"
     
-    # 检查SQL目录是否存在
-    if not sql_dir.exists():
-        logger.error(f"SQL目录不存在: {sql_dir}")
-        return
-    
-    # 列出所有SQL文件
-    sql_files = list(sql_dir.glob("*.sql"))
-    logger.info(f"发现 {len(sql_files)} 个SQL文件: {', '.join([f.name for f in sql_files])}")
-    
-    # 导入SQL文件
-    importer = SQLImporter(engine, str(sql_dir))
-    imported_files = importer.import_all_sql_files()
-    
-    if imported_files:
-        logger.info(f"成功导入 {len(imported_files)}/{len(sql_files)} 个SQL文件: ")
-        for file_name, table_name in imported_files.items():
-            logger.info(f"  - {file_name}")
+    # 导入保险产品数据
+    if data_dir.exists():
+        summary = import_insurance_products_data(db, str(data_dir))
+        logger.info(f"保险产品数据导入完成: 成功导入 {summary['successful_tables']}/{summary['total_tables']} 个表，共 {summary['total_records']} 条记录")
+        for product_type, info in summary['tables'].items():
+            logger.info(f"  - {product_type}: {info['table_name']} ({info['record_count']} 条记录)")
     else:
-        logger.warning("没有导入任何SQL文件")
+        logger.warning(f"数据目录不存在: {data_dir}")
     
     # 验证表是否成功创建
     inspector = inspect(engine)

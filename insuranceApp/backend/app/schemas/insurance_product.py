@@ -12,29 +12,23 @@ class ProductTypesResponse(ResponseBase):
     """保险产品类型响应"""
     product_types: List[str] = []
 
+# 字段信息模型
+class FieldInfo(BaseModel):
+    """字段信息"""
+    name: str
+    type: str
+    description: str
+
 # 保险产品字段响应
 class ProductFieldsResponse(ResponseBase):
     """保险产品字段响应"""
-    fields: List[str] = []
+    fields: List[FieldInfo] = []
 
-# 保险产品信息
-class ProductInfo(BaseModel):
-    """保险产品基本信息"""
-    product_id: int
-    product_name: str
-    company_name: str
-    insurance_type: str
-    premium: Any
-    total_score: Optional[float] = None
-    
-    class Config:
-        from_attributes = True
-
-# 保险产品搜索响应
+# 保险产品搜索响应（使用动态字段）
 class ProductSearchResponse(ResponseBase):
     """保险产品搜索响应"""
     pages: int = 1
-    products: List[ProductInfo] = []
+    products: List[Dict[str, Any]] = []
 
 # 保险产品详情响应基类
 class ProductDetailBase(ResponseBase):
