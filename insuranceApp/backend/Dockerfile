@@ -12,8 +12,6 @@ RUN uv pip install --system --no-cache-dir -r requirements.txt
 
 # 复制应用代码
 COPY ./app ./app
-# 复制SQL文件
-COPY ./sql ./sql
 # 复制数据文件
 COPY ./datas ./datas
 
