@@ -3,7 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 
 import '../models/dify_models.dart';
-import '../models/insurance_product.dart';
+import '../utils/product_type_mapper.dart';
 import 'chat_service.dart';
 import 'insurance_service.dart';
 
@@ -145,7 +145,7 @@ class InsuranceChatService {
     final buffer = StringBuffer();
     
     // 添加产品类型
-    buffer.writeln('保险产品类型: $productType');
+    buffer.writeln('保险产品类型: ${ProductTypeMapper.toChineseName(productType)}');
     
     // 遍历产品信息并格式化
     for (final entry in productInfo.entries) {

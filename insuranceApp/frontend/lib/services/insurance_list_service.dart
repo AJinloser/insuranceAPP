@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../models/insurance_product.dart';
 import 'api_service.dart';
@@ -106,19 +105,11 @@ class InsuranceListService extends ChangeNotifier {
           
           debugPrint('产品信息原始数据: $productInfo');
           
+          // 使用新的构造函数，直接传入所有字段
           _insuranceList[i].productDetail = InsuranceProduct(
             productId: _insuranceList[i].productId,
-            productName: productInfo['product_name'],
-            companyName: productInfo['company_name'],
-            insuranceType: _insuranceList[i].productType,
-            premium: productInfo['premium'],
-            totalScore: _parseToDouble(productInfo['total_score']),
-            // 根据不同产品类型设置其他字段
-            coverageAmount: productInfo['coverage_amount'],
-            coveragePeriod: productInfo['coverage_period']?.toString(),
             productType: _insuranceList[i].productType,
-            coverageContent: productInfo['coverage_content'],
-            additionalData: Map<String, dynamic>.from(productInfo),
+            allFields: Map<String, dynamic>.from(productInfo),
           );
           
           debugPrint('成功创建产品详情: ${_insuranceList[i].productDetail?.productName}');
@@ -132,30 +123,17 @@ class InsuranceListService extends ChangeNotifier {
         // 即使获取详情失败，也创建一个基本的产品对象
         _insuranceList[i].productDetail = InsuranceProduct(
           productId: _insuranceList[i].productId,
-          productName: '产品ID: ${_insuranceList[i].productId}',
-          companyName: '未知',
-          insuranceType: _insuranceList[i].productType,
           productType: _insuranceList[i].productType,
+          allFields: {
+            'product_id': _insuranceList[i].productId,
+            'product_type': _insuranceList[i].productType,
+            '产品名称': '产品ID: ${_insuranceList[i].productId}',
+            '公司名称': '未知',
+          },
         );
       }
     }
     notifyListeners();
-  }
-
-  /// 安全地将值转换为double
-  double? _parseToDouble(dynamic value) {
-    if (value == null) return null;
-    if (value is double) return value;
-    if (value is int) return value.toDouble();
-    if (value is String) {
-      try {
-        return double.parse(value);
-      } catch (e) {
-        debugPrint('无法解析double值: $value');
-        return null;
-      }
-    }
-    return null;
   }
 
   /// 添加保险产品到保单

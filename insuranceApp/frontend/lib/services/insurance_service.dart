@@ -1,8 +1,8 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import '../models/insurance_product.dart';
 import 'api_service.dart';
 import '../utils/error_logger.dart';
+import '../utils/product_type_mapper.dart';
 
 /// 保险产品搜索响应模型
 class InsuranceSearchResponse {
@@ -46,7 +46,8 @@ class InsuranceService extends ChangeNotifier {
   String _currentProductType = '';
   int _currentPage = 1;
   int _limit = 10;
-  String _sortBy = 'total_score';
+  String _sortBy = '';
+  String _sortOrder = 'desc';
   Map<String, dynamic> _searchParams = {};
 
   // Getters
@@ -59,6 +60,15 @@ class InsuranceService extends ChangeNotifier {
   String get currentProductType => _currentProductType;
   int get currentPage => _currentPage;
   String get sortBy => _sortBy;
+  String get sortOrder => _sortOrder;
+  
+  /// 获取产品类型的中文名称列表
+  List<String> get productTypeChineseNames => 
+      ProductTypeMapper.getAllChineseNames(_productTypes);
+  
+  /// 获取当前产品类型的中文名称
+  String get currentProductTypeChineseName => 
+      ProductTypeMapper.toChineseName(_currentProductType);
 
   /// 获取保险产品类型列表
   Future<void> getProductTypes() async {
@@ -138,7 +148,8 @@ class InsuranceService extends ChangeNotifier {
     required String productType,
     int page = 1,
     int limit = 10,
-    String sortBy = 'total_score',
+    String? sortBy,
+    String sortOrder = 'desc',
     Map<String, dynamic>? searchParams,
   }) async {
     _setLoading(true);
@@ -148,7 +159,8 @@ class InsuranceService extends ChangeNotifier {
     _currentProductType = productType;
     _currentPage = page;
     _limit = limit;
-    _sortBy = sortBy;
+    _sortBy = sortBy ?? '';
+    _sortOrder = sortOrder;
     _searchParams = searchParams ?? {};
 
     try {
@@ -156,9 +168,14 @@ class InsuranceService extends ChangeNotifier {
         'product_type': productType,
         'page': page,
         'limit': limit,
-        'sort_by': sortBy,
+        'sort_order': sortOrder,
         ...(_searchParams),
       };
+      
+      // 只有当sortBy不为空时才添加
+      if (sortBy != null && sortBy.isNotEmpty) {
+        queryParams['sort_by'] = sortBy;
+      }
 
       final response = await _apiService.get(
         '/insurance_products/search',
@@ -226,6 +243,10 @@ class InsuranceService extends ChangeNotifier {
     // 清空当前搜索参数
     _searchParams.clear();
     
+    // 重置排序（避免使用不存在的字段）
+    _sortBy = '';
+    _sortOrder = 'desc';
+    
     // 获取新类型的字段
     await getProductFields(productType);
     
@@ -234,18 +255,22 @@ class InsuranceService extends ChangeNotifier {
       productType: productType,
       page: 1,
       limit: _limit,
-      sortBy: _sortBy,
+      sortBy: null,
+      sortOrder: 'desc',
     );
   }
 
   /// 重置搜索条件
   Future<int> resetSearch() async {
     _searchParams.clear();
+    _sortBy = '';
+    _sortOrder = 'desc';
     return await searchProducts(
       productType: _currentProductType,
       page: 1,
       limit: _limit,
-      sortBy: 'total_score',
+      sortBy: null,
+      sortOrder: 'desc',
     );
   }
 
@@ -256,7 +281,7 @@ class InsuranceService extends ChangeNotifier {
       productType: _currentProductType,
       page: 1,
       limit: _limit,
-      sortBy: _sortBy,
+      sortBy: _sortBy.isEmpty ? null : _sortBy,
       searchParams: _searchParams,
     );
   }
@@ -267,20 +292,59 @@ class InsuranceService extends ChangeNotifier {
       productType: _currentProductType,
       page: page,
       limit: _limit,
-      sortBy: _sortBy,
+      sortBy: _sortBy.isEmpty ? null : _sortBy,
       searchParams: _searchParams,
     );
   }
 
   /// 更改排序方式
-  Future<int> changeSortBy(String sortBy) async {
+  Future<int> changeSortBy(String? sortBy, {String sortOrder = 'desc'}) async {
     return await searchProducts(
       productType: _currentProductType,
       page: 1,
       limit: _limit,
       sortBy: sortBy,
+      sortOrder: sortOrder,
       searchParams: _searchParams,
     );
+  }
+  
+  /// 获取数值类型字段列表（用于排序和筛选）
+  List<Map<String, dynamic>> getNumericFields() {
+    return _productFields
+        .where((field) {
+          final type = field['type'].toString().toLowerCase();
+          return type == 'numeric' || 
+                 type == 'integer' ||
+                 type == 'double' ||
+                 type == 'real' ||
+                 type == 'decimal' ||
+                 type == 'float' ||
+                 type.contains('numeric') ||
+                 type.contains('int') ||
+                 type.contains('decimal');
+        })
+        .toList();
+  }
+  
+  /// 获取布尔类型字段列表（用于筛选）
+  List<Map<String, dynamic>> getBooleanFields() {
+    return _productFields
+        .where((field) => 
+            field['type'] == 'boolean' ||
+            field['type'].toString().contains('bool'))
+        .toList();
+  }
+  
+  /// 获取文本类型字段列表（用于搜索）
+  List<Map<String, dynamic>> getTextFields() {
+    return _productFields
+        .where((field) => 
+            field['type'] == 'text' || 
+            field['type'] == 'character varying' ||
+            field['type'].toString().contains('varchar') ||
+            field['type'].toString().contains('text'))
+        .toList();
   }
 
   void _setLoading(bool loading) {

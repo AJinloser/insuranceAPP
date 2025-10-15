@@ -9,8 +9,6 @@ import '../services/goal_suggestion_service.dart';
 import '../widgets/insurance_product_card.dart';
 import '../widgets/goal_suggestion_card.dart';
 import '../widgets/custom_markdown_body.dart';
-import 'dart:convert';
-import 'dart:math' show min;
 
 /// 聊天消息项组件
 class ChatMessageItem extends StatelessWidget {
@@ -394,73 +392,6 @@ class ChatMessageItem extends StatelessWidget {
     );
   }
 
-  /// 构建消息文件（图片等）
-  Widget _buildMessageFiles(List<dynamic> files) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: files.map((file) {
-        if (file is Map<String, dynamic>) {
-          final fileType = file['type'] as String?;
-          final fileName = file['name'] as String?;
-          final fileUrl = file['url'] as String?;
-          
-          if (fileType == 'image' && fileUrl != null) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  fileUrl,
-                  width: 200,
-                  height: 200,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: 200,
-                      height: 200,
-                      color: Colors.grey[300],
-                      child: const Icon(
-                        Icons.error,
-                        color: Colors.grey,
-                      ),
-                    );
-                  },
-                ),
-              ),
-            );
-          } else {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.insert_drive_file,
-                    color: Colors.grey[600],
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      fileName ?? 'Unknown file',
-                      style: TextStyle(
-                        color: Colors.grey[800],
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-        }
-        return const SizedBox.shrink();
-      }).toList(),
-    );
-  }
 }
 
 /// 动画点组件

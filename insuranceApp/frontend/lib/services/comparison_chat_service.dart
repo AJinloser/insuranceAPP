@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../models/dify_models.dart';
 import '../models/insurance_product.dart';
+import '../utils/product_type_mapper.dart';
 import 'chat_service.dart';
 import 'insurance_service.dart';
 
@@ -154,7 +155,7 @@ class ComparisonChatService {
       
       buffer.writeln('产品${i + 1}：');
       buffer.writeln('产品名称: ${product.productName}');
-      buffer.writeln('产品类型: ${product.productType}');
+      buffer.writeln('产品类型: ${ProductTypeMapper.toChineseName(product.productType)}');
       buffer.writeln('');
       
       // 遍历产品信息并格式化

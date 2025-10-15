@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 
 import '../models/dify_models.dart';
-import '../models/insurance_product.dart';
+import '../utils/product_type_mapper.dart';
 import '../services/chat_service.dart';
 import '../services/insurance_service.dart';
 import '../services/insurance_list_service.dart';
@@ -85,7 +85,7 @@ class AnalysisChatService {
           );
           
           final productInfo = insuranceService.productInfo;
-          if (productInfo != null) {
+          if (productInfo.isNotEmpty) {
             final formattedInfo = _formatProductInfo(productInfo, item.productType);
             productInfoList.add(formattedInfo);
           }
@@ -147,7 +147,7 @@ class AnalysisChatService {
     final buffer = StringBuffer();
     
     // 添加产品类型
-    buffer.writeln('产品类型: $productType');
+    buffer.writeln('产品类型: ${ProductTypeMapper.toChineseName(productType)}');
     
     // 添加基本信息
     if (productInfo['product_name'] != null) {
@@ -265,7 +265,7 @@ class AnalysisProduct {
     final buffer = StringBuffer();
     
     buffer.writeln('产品ID: $productId');
-    buffer.writeln('产品类型: $productType');
+    buffer.writeln('产品类型: ${ProductTypeMapper.toChineseName(productType)}');
     buffer.writeln('产品名称: $productName');
     buffer.writeln('保险公司: $companyName');
     

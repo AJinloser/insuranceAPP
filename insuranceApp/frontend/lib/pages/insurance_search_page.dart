@@ -55,6 +55,7 @@ class _InsuranceSearchPageState extends State<InsuranceSearchPage> with TickerPr
 
   void _handleTabSelection() {
     if (!_tabController.indexIsChanging) {
+      // 获取英文类型（用于API调用）
       final selectedType = _insuranceService.productTypes[_tabController.index];
       _switchProductType(selectedType);
     }
@@ -118,8 +119,8 @@ class _InsuranceSearchPageState extends State<InsuranceSearchPage> with TickerPr
     );
   }
 
-  Future<void> _changeSortBy(String sortBy) async {
-    final pages = await _insuranceService.changeSortBy(sortBy);
+  Future<void> _changeSortBy(String sortBy, {String sortOrder = 'desc'}) async {
+    final pages = await _insuranceService.changeSortBy(sortBy, sortOrder: sortOrder);
     setState(() {
       _totalPages = pages;
     });
@@ -315,8 +316,8 @@ class _InsuranceSearchPageState extends State<InsuranceSearchPage> with TickerPr
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),
-                  tabs: _insuranceService.productTypes
-                      .map((type) => Tab(text: type))
+                  tabs: _insuranceService.productTypeChineseNames
+                      .map((chineseName) => Tab(text: chineseName))
                       .toList(),
                 )
               : null,
@@ -569,6 +570,9 @@ class _InsuranceSearchPageState extends State<InsuranceSearchPage> with TickerPr
 
   /// 构建排序选择器
   Widget _buildSortSelector() {
+    // 获取数值类型字段用于排序
+    final numericFields = _insuranceService.getNumericFields();
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -576,49 +580,106 @@ class _InsuranceSearchPageState extends State<InsuranceSearchPage> with TickerPr
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey[300]!),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Icon(
-            Icons.sort,
-            color: Colors.grey[600],
-            size: 20,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '排序：',
-            style: TextStyle(
-              color: Colors.grey[700],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _insuranceService.sortBy,
-                isExpanded: true,
-                onChanged: (String? newValue) {
-                  if (newValue != null) {
-                    _changeSortBy(newValue);
-                  }
-                },
-                items: const [
-                  DropdownMenuItem(
-                    value: 'total_score',
-                    child: Text('评分从高到低'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'premium',
-                    child: Text('保费从低到高'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'product_name',
-                    child: Text('产品名称'),
-                  ),
-                ],
+          // 排序字段选择
+          Row(
+            children: [
+              Icon(
+                Icons.sort,
+                color: Colors.grey[600],
+                size: 20,
               ),
-            ),
+              const SizedBox(width: 8),
+              Text(
+                '排序字段：',
+                style: TextStyle(
+                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _insuranceService.sortBy.isEmpty ? null : _insuranceService.sortBy,
+                    hint: const Text('默认排序'),
+                    isExpanded: true,
+                    onChanged: (String? newValue) {
+                      _changeSortBy(
+                        newValue ?? '',
+                        sortOrder: _insuranceService.sortOrder,
+                      );
+                    },
+                    items: [
+                      const DropdownMenuItem(
+                        value: '',
+                        child: Text('默认排序'),
+                      ),
+                      ...numericFields.map((field) {
+                        return DropdownMenuItem(
+                          value: field['name'] as String,
+                          child: Text(
+                            field['description'] as String,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
+          
+          // 排序方向选择（只在选择了排序字段时显示）
+          if (_insuranceService.sortBy.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(
+                  Icons.swap_vert,
+                  color: Colors.grey[600],
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '排序方向：',
+                  style: TextStyle(
+                    color: Colors.grey[700],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _insuranceService.sortOrder,
+                      isExpanded: true,
+                      onChanged: (String? newValue) {
+                        if (newValue != null) {
+                          _changeSortBy(
+                            _insuranceService.sortBy,
+                            sortOrder: newValue,
+                          );
+                        }
+                      },
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'desc',
+                          child: Text('降序（从大到小）'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'asc',
+                          child: Text('升序（从小到大）'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -888,70 +949,326 @@ class _InsuranceSearchPageState extends State<InsuranceSearchPage> with TickerPr
   }
 
   void _showFilterBottomSheet() {
+    // 临时存储筛选条件
+    final tempFilters = Map<String, dynamic>.from(_currentFilters);
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.6,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 标题栏
-            Row(
-              children: [
-                const Text(
-                  '筛选条件',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () {
-                    _currentFilters.clear();
-                    Navigator.pop(context);
-                  },
-                  child: const Text('清空'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _search();
-                  },
-                  child: const Text('确定'),
-                ),
-              ],
-            ),
-            
-            const Divider(),
-            
-            // 筛选字段列表
-            Expanded(
-              child: ListView(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 标题栏
+              Row(
                 children: [
-                  // TODO: 基于productFields动态生成筛选表单
-                  const Center(
-                    child: Text(
-                      '筛选功能开发中...',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 16,
-                      ),
+                  const Text(
+                    '筛选条件',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
+                  ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () {
+                      setModalState(() {
+                        tempFilters.clear();
+                      });
+                    },
+                    child: const Text('清空'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _currentFilters.clear();
+                        _currentFilters.addAll(tempFilters);
+                      });
+                      Navigator.pop(context);
+                      _search();
+                    },
+                    child: const Text('确定'),
                   ),
                 ],
               ),
-            ),
-          ],
+              
+              const Divider(),
+              
+              // 筛选字段列表
+              Expanded(
+                child: ListView(
+                  children: [
+                    // 数值类型字段筛选
+                    _buildNumericFilters(tempFilters, setModalState),
+                    
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    
+                    // 布尔类型字段筛选
+                    _buildBooleanFilters(tempFilters, setModalState),
+                    
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    
+                    // 文本类型字段筛选
+                    _buildTextFilters(tempFilters, setModalState),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+  
+  /// 构建数值类型字段筛选
+  Widget _buildNumericFilters(Map<String, dynamic> tempFilters, StateSetter setModalState) {
+    final numericFields = _insuranceService.getNumericFields();
+    
+    if (numericFields.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '数值筛选',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...numericFields.map((field) {
+          final fieldName = field['name'] as String;
+          final description = field['description'] as String;
+          final currentValue = tempFilters[fieldName] as String?;
+          
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    // 比较符号选择
+                    SizedBox(
+                      width: 80,
+                      child: DropdownButtonFormField<String>(
+                        value: _getComparisonOperator(currentValue),
+                        decoration: InputDecoration(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: '>=', child: Text('>=')),
+                          DropdownMenuItem(value: '<=', child: Text('<=')),
+                          DropdownMenuItem(value: '>', child: Text('>')),
+                          DropdownMenuItem(value: '<', child: Text('<')),
+                          DropdownMenuItem(value: '=', child: Text('=')),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            setModalState(() {
+                              final numValue = _getNumericValue(currentValue);
+                              tempFilters[fieldName] = '$value$numValue';
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // 数值输入
+                    Expanded(
+                      child: TextField(
+                        controller: TextEditingController(
+                          text: _getNumericValue(currentValue),
+                        ),
+                        decoration: InputDecoration(
+                          hintText: '输入数值',
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (value) {
+                          if (value.isNotEmpty) {
+                            setModalState(() {
+                              final operator = _getComparisonOperator(currentValue);
+                              tempFilters[fieldName] = '$operator$value';
+                            });
+                          } else {
+                            setModalState(() {
+                              tempFilters.remove(fieldName);
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                    // 清除按钮
+                    if (currentValue != null)
+                      IconButton(
+                        icon: const Icon(Icons.clear, size: 20),
+                        onPressed: () {
+                          setModalState(() {
+                            tempFilters.remove(fieldName);
+                          });
+                        },
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+  
+  /// 构建布尔类型字段筛选
+  Widget _buildBooleanFilters(Map<String, dynamic> tempFilters, StateSetter setModalState) {
+    final booleanFields = _insuranceService.getBooleanFields();
+    
+    if (booleanFields.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '是/否筛选',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...booleanFields.map((field) {
+          final fieldName = field['name'] as String;
+          final description = field['description'] as String;
+          final currentValue = tempFilters[fieldName];
+          
+          return CheckboxListTile(
+            title: Text(description),
+            subtitle: Text(
+              currentValue == null ? '不限' : (currentValue == true ? '是' : '否'),
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
+            tristate: true,
+            value: currentValue as bool?,
+            onChanged: (value) {
+              setModalState(() {
+                if (value == null) {
+                  tempFilters.remove(fieldName);
+                } else {
+                  tempFilters[fieldName] = value;
+                }
+              });
+            },
+          );
+        }),
+      ],
+    );
+  }
+  
+  /// 构建文本类型字段筛选
+  Widget _buildTextFilters(Map<String, dynamic> tempFilters, StateSetter setModalState) {
+    final textFields = _insuranceService.getTextFields();
+    
+    // 只显示产品名称字段（避免太多文本字段）
+    final productNameField = textFields.firstWhere(
+      (field) => field['name'].toString().contains('product_name') ||
+                 field['description'].toString().contains('产品名'),
+      orElse: () => <String, dynamic>{},
+    );
+    
+    if (productNameField.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '文本搜索',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: TextEditingController(
+            text: _searchController.text,
+          ),
+          decoration: InputDecoration(
+            hintText: '搜索产品名称',
+            prefixIcon: const Icon(Icons.search),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onChanged: (value) {
+            _searchController.text = value;
+          },
+        ),
+      ],
+    );
+  }
+  
+  /// 获取比较运算符
+  String _getComparisonOperator(String? value) {
+    if (value == null || value.isEmpty) return '>=';
+    
+    if (value.startsWith('>=')) return '>=';
+    if (value.startsWith('<=')) return '<=';
+    if (value.startsWith('>')) return '>';
+    if (value.startsWith('<')) return '<';
+    if (value.startsWith('=')) return '=';
+    
+    return '>=';
+  }
+  
+  /// 获取数值部分
+  String _getNumericValue(String? value) {
+    if (value == null || value.isEmpty) return '';
+    
+    // 移除运算符，返回数值部分
+    if (value.startsWith('>=') || value.startsWith('<=')) {
+      return value.substring(2).trim();
+    }
+    if (value.startsWith('>') || value.startsWith('<') || value.startsWith('=')) {
+      return value.substring(1).trim();
+    }
+    
+    return value;
   }
 } 
