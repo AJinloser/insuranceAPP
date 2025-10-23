@@ -12,6 +12,7 @@ from app.api.goals import router as goals_router
 from app.api.logs import router as logs_router
 from app.api.admin import router as admin_router
 from app.api.basic_medical_insurance import router as basic_medical_insurance_router
+from app.api.social_pension_insurance import router as social_pension_insurance_router
 from app.core.config import settings
 from app.core.error_handler import global_exception_handler
 from app.db.base import Base, engine, get_db
@@ -77,6 +78,11 @@ app.include_router(
     basic_medical_insurance_router,
     prefix="/api/v1/basic_medical_insurance",
     tags=["基本医保"]
+)
+app.include_router(
+    social_pension_insurance_router,
+    prefix="/api/v1/social_pension_insurance",
+    tags=["社会养老保险"]
 )
 
 

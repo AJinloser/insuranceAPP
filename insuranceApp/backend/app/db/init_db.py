@@ -6,11 +6,13 @@ from sqlalchemy import text, inspect
 from app.db.base import Base, engine
 from app.db.migration import run_database_migration
 from app.db.importers import import_basic_medical_insurance_data, import_insurance_products_data
+from app.db.importers.social_pension_insurance_importer import import_social_pension_insurance_data
 from app.models.user import User
 from app.models.user_info import UserInfo
 from app.models.insurance_list import InsuranceList
 from app.models.goal import Goal
 from app.models.basic_medical_insurance import BasicMedicalInsurance
+from app.models.social_pension_insurance import SocialPensionInsurance
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +99,18 @@ def init_db(db: Session) -> None:
             logger.error("基本医保数据导入失败")
     else:
         logger.warning(f"基本医保数据文件不存在: {excel_path}")
+    
+    # 导入社会养老保险数据
+    logger.info("导入社会养老保险数据...")
+    pension_excel_path = base_dir / "datas" / "社会养老保险.xlsx"
+    if pension_excel_path.exists():
+        success = import_social_pension_insurance_data(db, str(pension_excel_path))
+        if success:
+            logger.info("社会养老保险数据导入成功")
+        else:
+            logger.error("社会养老保险数据导入失败")
+    else:
+        logger.warning(f"社会养老保险数据文件不存在: {pension_excel_path}")
     
     # 添加测试用户，如果不存在
     create_test_user(db)

@@ -21,6 +21,7 @@ insuranceApp/
 │   │   └── schemas/ # 数据架构
 │   ├── datas/       # 数据文件
 │   │   ├── 基本医保.xlsx     # 基本医保数据文件
+│   │   ├── 社会养老保险.xlsx # 社会养老保险数据文件
 │   │   ├── 定期寿险.xlsx     # 定期寿险产品数据
 │   │   ├── 非年金.xlsx       # 非年金产品数据
 │   │   ├── 年金.xlsx         # 年金产品数据
@@ -599,6 +600,26 @@ insuranceApp/
         - cities: 城市名称列表
         - count: 城市数量
 
+- 社会养老保险查询API
+    - 请求方式：GET
+    - 请求路径：/social_pension_insurance/query
+    - 请求参数：
+        - province: 省份名称
+    - 后端根据省份匹配社会养老保险表中的省份字段，返回对应省份的养老保险政策信息
+    - 返回体：
+        - code: 状态码
+        - message: 查询成功或失败信息
+        - data: 社会养老保险数据（中文字段名）
+
+- 获取社会养老保险省份列表API
+    - 请求方式：GET
+    - 请求路径：/social_pension_insurance/provinces
+    - 返回体：
+        - code: 状态码
+        - message: 获取省份列表成功或失败信息
+        - provinces: 省份名称列表
+        - count: 省份数量
+
 ### 后端数据库
 - 目前先采用postgresql数据库
 - 数据库表结构
@@ -709,3 +730,40 @@ insuranceApp/
             - retired_outpatient_payment_ratio: 退休_门诊支付比例
             - retired_segment1-4相关字段: 退休分段支付比例
         - 其他政策字段：包括大病保险、异地就医、长期护理保险等相关字段
+
+    - 社会养老保险表（用于存储各省份社会养老保险政策信息）
+        - id: 主键ID
+        - province_code: 省份代码（索引字段）
+        - data_year: 数据年份
+        - 城镇职工养老保险相关字段：
+            - avg_monthly_salary_basis: 核定缴费基数的全省月平均工资
+            - contribution_base_min: 城镇职工缴费基数下限
+            - contribution_base_max: 城镇职工缴费基数上限
+            - employer_ratio: 城镇职工单位缴费比例
+            - employee_ratio: 城镇职工个人缴费比例
+            - flexible_worker_ratio: 灵活就业人员缴费比例
+        - 城乡居民养老保险相关字段：
+            - contribution_base_min_city: 城乡居民最低缴费金额
+            - contribution_base_max_city: 城乡居民最高缴费金额
+            - contribution_tiers: 缴费档次（JSON类型）
+            - government_subsidies: 政府补贴标准（JSON类型）
+            - base_pension_standard: 基础养老金标准
+        - 退休年龄相关字段：
+            - retirement_age_male: 男性退休年龄
+            - retirement_age_female: 女性退休年龄
+            - retirement_age_female_worker: 女工人退休年龄
+            - retirement_age: 待遇领取年龄
+            - min_contribution_years: 最低累计缴费年限
+        - 转移接续相关字段：
+            - transfer_process: 转移接续流程
+            - transfer_timeframe: 转移办理时限
+            - pension_qualification_rule: 养老金领取地确定规则
+            - fund_transfer_rule: 资金划转规则
+        - 异地待遇领取相关字段：
+            - remote_certification: 异地资格认证方式
+            - certification_frequency: 资格认证周期
+            - remote_payment_method: 异地发放方式
+        - 其他字段：
+            - long_term_incentive: 长缴多得激励政策
+            - more_pay_more_incentive: 多缴多得激励政策
+            - special_notes: 特别说明
