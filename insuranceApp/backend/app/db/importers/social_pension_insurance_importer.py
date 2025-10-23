@@ -29,7 +29,7 @@ class SocialPensionInsuranceImporter:
         # 字段映射：中文字段名 -> 英文字段名
         self.field_mapping = {
             "唯一记录ID，自增": "id",
-            "关联省市代码": "province_code",
+            "关联省份代码": "province_code",
             "关联数据年份": "data_year",
             "核定缴费基数的全省月平均工资": "avg_monthly_salary_basis",
             "城镇职工缴费基数下限": "contribution_base_min",
