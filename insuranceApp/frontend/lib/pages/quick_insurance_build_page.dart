@@ -95,7 +95,7 @@ class _QuickInsuranceBuildPageState extends State<QuickInsuranceBuildPage> {
       child: Scaffold(
         backgroundColor: Colors.grey[50],
         appBar: AppBar(
-          title: const Text('快速构筑保险方案'),
+          title: const Text('快速保险知识分析'),
           backgroundColor: Theme.of(context).primaryColor,
           elevation: 0,
           foregroundColor: Colors.white,
@@ -160,7 +160,7 @@ class _QuickInsuranceBuildPageState extends State<QuickInsuranceBuildPage> {
             const SizedBox(height: 8),
             
             Text(
-              '正在基于您的年龄、收入、风险偏好等信息\n为您量身定制保险方案...',
+              '正在基于您的年龄、收入、风险偏好等信息\n为您分析保险知识...',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[600],
@@ -191,7 +191,7 @@ class _QuickInsuranceBuildPageState extends State<QuickInsuranceBuildPage> {
             const SizedBox(height: 16),
             
             Text(
-              '生成方案失败',
+              '生成分析失败',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -247,7 +247,7 @@ class _QuickInsuranceBuildPageState extends State<QuickInsuranceBuildPage> {
             const SizedBox(height: 16),
             
             Text(
-              '暂无保险方案',
+              '暂无保险分析',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -258,7 +258,7 @@ class _QuickInsuranceBuildPageState extends State<QuickInsuranceBuildPage> {
             const SizedBox(height: 8),
             
             Text(
-              '请点击重新生成按钮获取专属保险方案',
+              '请点击重新生成按钮获取保险知识分析',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[600],
@@ -278,7 +278,7 @@ class _QuickInsuranceBuildPageState extends State<QuickInsuranceBuildPage> {
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
-              child: const Text('生成保险方案'),
+              child: const Text('生成保险分析'),
             ),
           ],
         ),
@@ -298,7 +298,7 @@ class _QuickInsuranceBuildPageState extends State<QuickInsuranceBuildPage> {
           
           const SizedBox(height: 16),
           
-          // 推荐产品列表
+          // 相关产品列表
           if (service.recommendedProducts.isNotEmpty) ...[
             _buildRecommendedProductsSection(service.recommendedProducts),
             const SizedBox(height: 16),
@@ -340,7 +340,7 @@ class _QuickInsuranceBuildPageState extends State<QuickInsuranceBuildPage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'AI专属建议',
+                    'AI分析结果',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -453,13 +453,13 @@ class _QuickInsuranceBuildPageState extends State<QuickInsuranceBuildPage> {
     );
   }
 
-  /// 构建推荐产品部分
+  /// 构建相关产品部分
   Widget _buildRecommendedProductsSection(List<InsuranceProductMatch> products) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '推荐产品',
+          '相关产品',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -470,7 +470,7 @@ class _QuickInsuranceBuildPageState extends State<QuickInsuranceBuildPage> {
         const SizedBox(height: 12),
         
         Text(
-          '根据您的个人信息，我们还为您筛选出以下优质保险产品：',
+          '根据您的个人信息，我们还为您筛选出以下保险产品供您学习了解：',
           style: TextStyle(
             fontSize: 14,
             color: Colors.grey[600],
@@ -522,7 +522,7 @@ class _QuickInsuranceBuildPageState extends State<QuickInsuranceBuildPage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    '需要进一步咨询？',
+                    '需要进一步了解？',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,

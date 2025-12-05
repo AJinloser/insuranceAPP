@@ -561,7 +561,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                 labelText: '目标详情',
                 border: OutlineInputBorder(),
                 isDense: true,
-                hintText: '请描述您的财务目标，例如：5年内购买一套200万的房产、为子女准备100万教育金、计划60岁退休后每月有15000元收入等',
+                hintText: '请描述您的财务目标，例如：5年内准备一套200万的房产、为子女准备100万教育金、计划60岁退休后每月有15000元收入等',
                 hintStyle: TextStyle(fontSize: 13, color: Colors.grey),
               ),
               maxLines: 3,
@@ -738,7 +738,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         hintText = '请填写您的社会养老保险情况，例如：已缴费10年、城镇职工养老保险等';
         break;
       case '商业保险':
-        hintText = '请填写您已购买的商业保险，例如：重疾险50万、意外险100万等';
+        hintText = '请填写您已拥有的商业保险，例如：重疾险50万、意外险100万等';
         break;
     }
     

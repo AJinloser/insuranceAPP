@@ -927,7 +927,7 @@ class ChatService with ChangeNotifier {
     }
   }
 
-  // 获取当前模块的推荐问题列表
+  // 获取当前模块的参考问题列表
   List<String> get moduleQuestions {
     if (selectedModule?.parameters?.suggestedQuestions != null) {
       return selectedModule!.parameters!.suggestedQuestions!;

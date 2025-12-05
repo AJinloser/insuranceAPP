@@ -457,7 +457,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 const SizedBox(height: 12),
                 _buildPrivacyPolicySection(
                   '信息用途',
-                  '• 个性化保险产品推荐\n• 财务规划建议与分析\n• 风险评估与管理\n• 产品匹配与优化',
+                  '• 个性化保险产品教育\n• 财务规划知识学习与分析\n• 风险评估与管理教育\n• 产品知识普及与学习',
                 ),
                 const SizedBox(height: 12),
                 _buildPrivacyPolicySection(
@@ -482,7 +482,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '我们承诺：所有信息均为可选填写，您可以选择跳过或稍后填写，这不会影响您使用我们的服务。',
+                          '我们承诺：所有信息均为可选填写，您可以选择跳过或稍后填写，这不会影响您使用我们的功能。',
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.green.shade700,
@@ -543,7 +543,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            '欢迎来到skysail，请您提供一些您的基本信息如年龄和性别，这能帮助我们更好地了解您来为您提供服务，如您担心隐私泄露，也可以不进行填写',
+            '欢迎来到skysail，请您提供一些您的基本信息如年龄和性别，这能帮助我们更好地了解您来为您提供知识普及，如您担心隐私泄露，也可以不进行填写',
             style: TextStyle(
               fontSize: 14.0,
               color: Colors.grey[600],
@@ -650,7 +650,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            '您目前最关心的问题是什么？最想要达成的目标是什么？例如：存下100万元提前退休，或是为养老做准备，您可以填写这部分信息，我们能够根据您的目标为您提供更加个性化的服务',
+            '您目前最关心的问题是什么？最想要达成的目标是什么？例如：存下100万元提前退休，或是为养老做准备，您可以填写这部分信息，我们能够根据您的目标为您提供更加个性化的教育',
             style: TextStyle(
               fontSize: 14.0,
               color: Colors.grey[600],
@@ -664,7 +664,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
             style: const TextStyle(fontSize: 16.0),
             decoration: const InputDecoration(
               labelText: '目标详情',
-              hintText: '请描述您的财务目标，例如：5年内购买一套200万的房产、为子女准备100万教育金、计划60岁退休后每月有15000元收入等',
+              hintText: '请描述您的财务目标，例如：5年内准备一套200万的房产、为子女准备100万教育金、计划60岁退休后每月有15000元收入等',
               hintStyle: TextStyle(fontSize: 13, color: Colors.grey),
               border: OutlineInputBorder(),
               isDense: true,
@@ -691,7 +691,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            '请您提供一些您的保险信息，包括您目前拥有的社会医疗保险、社会养老保险和商业保险，这能帮助我们更好地了解您的保险状况，为您推荐合适的保险产品。',
+            '请您提供一些您的保险信息，包括您目前拥有的社会医疗保险、社会养老保险和商业保险，这能帮助我们更好地了解您的保险状况，为您普及适合的保险知识。',
             style: TextStyle(
               fontSize: 14.0,
               color: Colors.grey[600],
@@ -748,7 +748,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
           
           // 商业保险问题
           _buildInsuranceQuestion(
-            '您是否购买了商业保险？',
+            '您是否拥有商业保险？',
             _hasBusinessInsurance,
             (value) => setState(() => _hasBusinessInsurance = value),
           ),

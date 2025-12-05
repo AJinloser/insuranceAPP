@@ -256,7 +256,7 @@ class _DefaultChatPageState extends State<DefaultChatPage> {
             ),
             const SizedBox(height: 16),
             Text(
-              '为您提供专业的保险咨询和个性化的财务规划建议',
+              '为您提供专业的保险教育和个性化的财务规划知识',
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.white.withOpacity(0.9),

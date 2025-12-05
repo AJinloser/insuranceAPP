@@ -87,7 +87,7 @@ class InsurancePage extends StatelessWidget {
             const SizedBox(height: 16),
             
             Text(
-              '为您提供全面的保险产品搜索和保单管理服务',
+              '为您提供全面的保险产品搜索和保单管理功能',
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.white.withValues(alpha: 0.9),
@@ -106,7 +106,7 @@ class InsurancePage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '我们提供什么服务？',
+          '我们提供什么功能？',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -150,8 +150,8 @@ class InsurancePage extends StatelessWidget {
         _buildFeatureListItem(
           context,
           icon: Icons.chat_bubble_outline,
-          title: 'AI咨询',
-          description: '与AI助手对话，获取个性化保险建议',
+          title: 'AI教育',
+          description: '与AI助手对话，获取个性化保险知识',
           color: Colors.purple,
                     ),
       ],
@@ -228,7 +228,7 @@ class InsurancePage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-          '选择您需要的服务',
+          '选择您需要的功能',
               style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -453,7 +453,7 @@ class InsurancePage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                          '快速构筑保险方案',
+                          '快速保险知识分析',
                           style: TextStyle(
                             fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -462,7 +462,7 @@ class InsurancePage extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                          '基于您的个人信息智能推荐',
+                          '基于您的个人信息智能分析',
                 style: TextStyle(
                             fontSize: 14,
                             color: Colors.green.shade600,
@@ -523,7 +523,7 @@ class InsurancePage extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '智能推荐：为您量身定制的保险产品组合',
+                            '智能分析：为您提供定制化的保险产品知识',
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.green.shade800,
@@ -545,7 +545,7 @@ class InsurancePage extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            '专业建议：专业的保险规划方案和购买建议',
+                            '专业教育：专业的保险规划方案和学习指导',
             style: TextStyle(
                               fontSize: 13,
                               color: Colors.green.shade800,
@@ -700,7 +700,7 @@ class InsurancePage extends StatelessWidget {
                         const SizedBox(width: 8),
             Expanded(
                     child: Text(
-                            'AI分析：获取个性化的保单分析建议',
+                            'AI分析：获取个性化的保单分析知识',
                       style: TextStyle(
                               fontSize: 13,
                               color: Colors.purple.shade800,

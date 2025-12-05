@@ -187,7 +187,7 @@ class HelpPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            _buildFeatureItem(Icons.smart_toy, '智能助手', 'AI聊天助手，提供专业建议', Colors.blue),
+            _buildFeatureItem(Icons.smart_toy, '智能助手', 'AI聊天助手，提供专业知识', Colors.blue),
             _buildFeatureItem(Icons.shield, '保险知识', '查看保险产品，管理保单', Colors.orange),
             _buildFeatureItem(Icons.trending_up, '财务规划', '设定目标，规划未来', Colors.green),
             _buildFeatureItem(Icons.person, '个人中心', '管理个人信息和设置', Colors.purple),

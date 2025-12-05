@@ -274,7 +274,7 @@ class QuickInsuranceBuildService extends ChangeNotifier {
       }
     }
     
-    // 从结构化文本中提取（最优推荐、可投保产品等）
+    // 从结构化文本中提取（相关产品、可了解产品等）
     final structuredPatterns = [
       RegExp(r'最优推荐[：:]\s*([^，。\n]+(?:保险|险|保))', caseSensitive: false),
       RegExp(r'可投保产品[：:]\s*([^，。\n]+(?:保险|险|保))', caseSensitive: false),
