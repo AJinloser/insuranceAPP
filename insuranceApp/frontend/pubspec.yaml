@@ -29,9 +29,14 @@ dependencies:
   just_audio: ^0.9.35
   file_picker: ^5.5.0
   path_provider: ^2.1.1
-  intl: ^0.20.2
+  intl: ^0.19.0
   timeago: ^3.7.1
   fl_chart: ^1.0.0
+  table_calendar: ^3.0.9
+  crypto: ^3.0.3
+  archive: ^3.4.10
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:

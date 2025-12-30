@@ -4,10 +4,15 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text, inspect
 
 from app.db.base import Base, engine
-from app.db.sql_importer import SQLImporter
+from app.db.migration import run_database_migration
+from app.db.importers import import_basic_medical_insurance_data, import_insurance_products_data
+from app.db.importers.social_pension_insurance_importer import import_social_pension_insurance_data
 from app.models.user import User
 from app.models.user_info import UserInfo
 from app.models.insurance_list import InsuranceList
+from app.models.goal import Goal
+from app.models.basic_medical_insurance import BasicMedicalInsurance
+from app.models.social_pension_insurance import SocialPensionInsurance
 
 logger = logging.getLogger(__name__)
 
@@ -58,30 +63,23 @@ def init_db(db: Session) -> None:
     logger.info("创建数据库表...")
     Base.metadata.create_all(bind=engine)
     
-    logger.info("导入SQL文件...")
-    # 获取SQL文件目录路径
+    # 运行数据库迁移
+    logger.info("执行数据库迁移...")
+    run_database_migration(db)
+    
+    logger.info("导入保险产品数据...")
+    # 获取数据文件目录路径
     base_dir = Path(__file__).resolve().parent.parent.parent
-    sql_dir = base_dir / "sql"
+    data_dir = base_dir / "datas"
     
-    # 检查SQL目录是否存在
-    if not sql_dir.exists():
-        logger.error(f"SQL目录不存在: {sql_dir}")
-        return
-    
-    # 列出所有SQL文件
-    sql_files = list(sql_dir.glob("*.sql"))
-    logger.info(f"发现 {len(sql_files)} 个SQL文件: {', '.join([f.name for f in sql_files])}")
-    
-    # 导入SQL文件
-    importer = SQLImporter(engine, str(sql_dir))
-    imported_files = importer.import_all_sql_files()
-    
-    if imported_files:
-        logger.info(f"成功导入 {len(imported_files)}/{len(sql_files)} 个SQL文件: ")
-        for file_name, table_name in imported_files.items():
-            logger.info(f"  - {file_name}")
+    # 导入保险产品数据
+    if data_dir.exists():
+        summary = import_insurance_products_data(db, str(data_dir))
+        logger.info(f"保险产品数据导入完成: 成功导入 {summary['successful_tables']}/{summary['total_tables']} 个表，共 {summary['total_records']} 条记录")
+        for product_type, info in summary['tables'].items():
+            logger.info(f"  - {product_type}: {info['table_name']} ({info['record_count']} 条记录)")
     else:
-        logger.warning("没有导入任何SQL文件")
+        logger.warning(f"数据目录不存在: {data_dir}")
     
     # 验证表是否成功创建
     inspector = inspect(engine)
@@ -89,6 +87,30 @@ def init_db(db: Session) -> None:
     insurance_tables = [table for table in all_tables if "insurance" in table.lower()]
     
     logger.info(f"数据库中的保险相关表 ({len(insurance_tables)}): {', '.join(insurance_tables)}")
+    
+    # 导入基本医保数据
+    logger.info("导入基本医保数据...")
+    excel_path = base_dir / "datas" / "基本医保.xlsx"
+    if excel_path.exists():
+        success = import_basic_medical_insurance_data(db, str(excel_path))
+        if success:
+            logger.info("基本医保数据导入成功")
+        else:
+            logger.error("基本医保数据导入失败")
+    else:
+        logger.warning(f"基本医保数据文件不存在: {excel_path}")
+    
+    # 导入社会养老保险数据
+    logger.info("导入社会养老保险数据...")
+    pension_excel_path = base_dir / "datas" / "社会养老保险.xlsx"
+    if pension_excel_path.exists():
+        success = import_social_pension_insurance_data(db, str(pension_excel_path))
+        if success:
+            logger.info("社会养老保险数据导入成功")
+        else:
+            logger.error("社会养老保险数据导入失败")
+    else:
+        logger.warning(f"社会养老保险数据文件不存在: {pension_excel_path}")
     
     # 添加测试用户，如果不存在
     create_test_user(db)

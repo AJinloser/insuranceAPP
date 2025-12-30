@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 // import '../models/user.dart';
 import 'api_service.dart';
 import 'chat_service.dart';
+import '../utils/error_logger.dart';
 
 enum AuthStatus {
   unknown,
@@ -78,6 +79,14 @@ class AuthService with ChangeNotifier {
       
       return true;
     } catch (e) {
+      // 记录登录错误
+      await logAuthError(
+        message: '用户登录失败: $e',
+        userId: account,
+        serviceName: 'AuthService',
+        stackTrace: e.toString(),
+      );
+      
       _authStatus = AuthStatus.unauthenticated;
       _isNewUser = false;
       _shouldShowProfile = false;
@@ -104,6 +113,14 @@ class AuthService with ChangeNotifier {
       
       return true;
     } catch (e) {
+      // 记录注册错误
+      await logAuthError(
+        message: '用户注册失败: $e',
+        userId: account,
+        serviceName: 'AuthService',
+        stackTrace: e.toString(),
+      );
+      
       _authStatus = AuthStatus.unauthenticated;
       _isNewUser = false;
       _shouldShowProfile = false;

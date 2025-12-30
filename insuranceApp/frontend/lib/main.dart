@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'pages/conversation_page.dart';
 import 'pages/home_page.dart';
@@ -13,9 +14,31 @@ import 'services/chat_service.dart';
 import 'services/insurance_service.dart';
 import 'services/insurance_list_service.dart';
 import 'services/user_info_service.dart';
+import 'services/goal_service.dart';
+import 'services/settings_service.dart';
+import 'services/developer_service.dart';
+import 'utils/error_logger.dart';
+import 'utils/global_error_handler.dart';
+
+// 全局RouteObserver
+final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // 初始化全局错误处理器
+  GlobalErrorHandler.init();
+  
+  // 初始化错误日志记录器
+  try {
+    await ErrorLogger.instance.init();
+    debugPrint("===> ErrorLogger初始化成功");
+    
+    // 清理旧日志文件
+    await ErrorLogger.instance.cleanOldLogs();
+  } catch (e) {
+    debugPrint("===> ErrorLogger初始化失败: $e");
+  }
   
   // 加载环境变量文件
   try {
@@ -23,6 +46,12 @@ void main() async {
     debugPrint("===> 成功加载.env文件");
   } catch (e) {
     debugPrint("===> 加载.env文件失败: $e");
+    // 记录环境变量加载错误
+    await logServiceError(
+      message: '加载.env文件失败: $e',
+      serviceName: 'main',
+      stackTrace: e.toString(),
+    );
   }
   
   // 初始化认证服务
@@ -45,6 +74,21 @@ void main() async {
   // 初始化保单服务
   final insuranceListService = InsuranceListService();
   
+  // 初始化目标服务
+  final goalService = GoalService();
+  
+  // 初始化设置服务
+  final settingsService = SettingsService();
+  try {
+    await settingsService.init();
+    debugPrint("===> SettingsService初始化成功");
+  } catch (e) {
+    debugPrint("===> SettingsService初始化失败: $e");
+  }
+  
+  // 初始化开发者服务
+  final developerService = DeveloperService();
+  
   runApp(
     MultiProvider(
       providers: [
@@ -52,6 +96,9 @@ void main() async {
         ChangeNotifierProvider.value(value: chatService),
         ChangeNotifierProvider.value(value: insuranceService),
         ChangeNotifierProvider.value(value: insuranceListService),
+        ChangeNotifierProvider.value(value: goalService),
+        ChangeNotifierProvider.value(value: settingsService),
+        ChangeNotifierProvider.value(value: developerService),
         ChangeNotifierProxyProvider<AuthService, UserInfoService>(
           create: (context) => UserInfoService(authService),
           update: (context, auth, previous) => previous ?? UserInfoService(auth),
@@ -68,11 +115,23 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '保险咨询APP',
+      title: '保险规划助手',
       debugShowCheckedModeBanner: false,
+      navigatorObservers: [routeObserver], // 添加RouteObserver
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('zh', 'CN'),
+        Locale('en', 'US'),
+      ],
       theme: ThemeData(
-        primarySwatch: Colors.purple,
-        primaryColor: const Color(0xFF8E6FF7),
+        primarySwatch: Colors.deepPurple,
+        primaryColor: const Color(0xFF6A1B9A),
+        fontFamily: 'PingFang SC',
+        useMaterial3: true,
         colorScheme: ColorScheme.light(
           primary: const Color(0xFF8E6FF7),
           secondary: const Color(0xFF8E6FF7),
@@ -106,15 +165,25 @@ class MyApp extends StatelessWidget {
       onGenerateRoute: (settings) {
         // 处理对话页面路由
         if (settings.name == '/conversation') {
+          debugPrint('===> Router: 收到对话页面路由请求');
           final args = settings.arguments as Map<String, dynamic>?;
           final conversationId = args?['conversationId'] as String?;
           final initialQuestion = args?['initialQuestion'] as String?;
+          final productInfo = args?['productInfo'] as String?;
+          
+          debugPrint('===> Router: 路由参数 - conversationId: $conversationId');
+          debugPrint('===> Router: 路由参数 - initialQuestion: $initialQuestion');
+          debugPrint('===> Router: 路由参数 - productInfo长度: ${productInfo?.length ?? 0}');
           
           return MaterialPageRoute(
-            builder: (context) => ConversationPage(
-              conversationId: conversationId,
-              initialQuestion: initialQuestion,
-            ),
+            builder: (context) {
+              debugPrint('===> Router: 正在构建ConversationPage');
+              return ConversationPage(
+                conversationId: conversationId,
+                initialQuestion: initialQuestion,
+                productInfo: productInfo,
+              );
+            },
           );
         }
         
@@ -123,11 +192,15 @@ class MyApp extends StatelessWidget {
           final args = settings.arguments as Map<String, dynamic>?;
           final conversationId = args?['conversationId'] as String?;
           final initialTabIndex = args?['initialTabIndex'] as int?;
+          final initialQuestion = args?['initialQuestion'] as String?;
+          final productInfo = args?['productInfo'] as String?;
           
           return MaterialPageRoute(
             builder: (context) => HomePage(
               conversationId: conversationId,
               initialTabIndex: initialTabIndex,
+              initialQuestion: initialQuestion,
+              productInfo: productInfo,
             ),
           );
         }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../models/dify_models.dart';
@@ -6,17 +7,28 @@ import '../models/insurance_product.dart';
 import '../services/chat_service.dart';
 import '../widgets/ai_welcome_view.dart';
 import '../widgets/chat_message_item.dart';
+import 'menu_page.dart';
 
 /// 会话详情页面
 /// 显示与AI助手的对话内容
 class ConversationPage extends StatefulWidget {
   final String? conversationId;
   final String? initialQuestion;
+  final String? productInfo;
+  final VoidCallback? onInitialQuestionSent;
+  final VoidCallback? onNewConversation; // 新增回调
+  final Function(String conversationId)? onConversationCreated; // 新增：会话创建回调
+  final VoidCallback? onBack; // 新增：返回回调
 
   const ConversationPage({
     Key? key,
     this.conversationId,
     this.initialQuestion,
+    this.productInfo,
+    this.onInitialQuestionSent,
+    this.onNewConversation,
+    this.onConversationCreated,
+    this.onBack,
   }) : super(key: key);
 
   @override
@@ -27,17 +39,48 @@ class _ConversationPageState extends State<ConversationPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isLoading = true;
+  bool _hasProductInfo = false;
+  bool _hasInitialQuestionSent = false; // 跟踪是否已经发送过初始问题
+  bool _showWelcomeView = true; // 控制是否显示欢迎视图
+  ChatService? _chatService; // 缓存ChatService引用
   
   @override
   void initState() {
     super.initState();
+    debugPrint('===> ConversationPage: initState开始');
+    debugPrint('===> ConversationPage: conversationId=${widget.conversationId}');
+    debugPrint('===> ConversationPage: initialQuestion=${widget.initialQuestion}');
+    debugPrint('===> ConversationPage: productInfo长度=${widget.productInfo?.length ?? 0}');
+    
+    _hasProductInfo = widget.productInfo != null && widget.productInfo!.isNotEmpty;
+    
+    // 如果有产品信息，打印调试信息
+    if (_hasProductInfo) {
+      debugPrint('===> ConversationPage: 收到产品信息，长度: ${widget.productInfo!.length}');
+    }
+    
+    debugPrint('===> ConversationPage: 准备执行_loadConversation');
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint('===> ConversationPage: PostFrameCallback触发，开始加载会话');
       _loadConversation();
     });
   }
   
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 在这里安全地获取ChatService引用
+    _chatService = Provider.of<ChatService>(context, listen: false);
+  }
+
+  @override
   void dispose() {
+    // 当页面销毁时，自动终止正在进行的对话响应
+    // 使用缓存的ChatService引用，避免在dispose中查找provider
+    if (_chatService?.isSending == true) {
+      _chatService?.stopResponse();
+    }
+    
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -61,7 +104,10 @@ class _ConversationPageState extends State<ConversationPage> {
         await chatService.loadParametersForModule(chatService.selectedModule!);
       }
       
-      if (widget.conversationId != null) {
+      // 只有在conversationId不为空时才查找已有会话
+      if (widget.conversationId != null && widget.conversationId!.isNotEmpty) {
+        debugPrint('===> ConversationPage: 加载已有会话: ${widget.conversationId}');
+        
         // 查找会话
         final conversation = chatService.conversations.firstWhere(
           (c) => c.id == widget.conversationId,
@@ -70,10 +116,26 @@ class _ConversationPageState extends State<ConversationPage> {
         
         // 加载会话详情
         await chatService.loadConversation(conversation);
+      } else {
+        debugPrint('===> ConversationPage: 新会话模式，等待用户发送消息');
+        // 对于新会话，不需要预先创建会话，让sendMessage方法处理
+        // 只需要确保已加载模块参数
+        if (chatService.selectedModule?.parameters == null) {
+          await chatService.loadParametersForModule(chatService.selectedModule!);
+        }
+        
+        // 对于新会话，ChatService会在发送第一条消息时自动处理会话创建
+        // 这里不需要手动设置建议问题，ChatService会处理
       }
       
+      // 检查是否有现有消息，如果有则不显示欢迎视图
+      if (chatService.messages.isNotEmpty) {
+        _showWelcomeView = false;
+      }
+
       // 如果有初始问题，在页面加载完成后自动发送
-      if (widget.initialQuestion != null && widget.initialQuestion!.isNotEmpty) {
+      if (widget.initialQuestion != null && widget.initialQuestion!.isNotEmpty && !_hasInitialQuestionSent) {
+        _showWelcomeView = false; // 有初始问题时不显示欢迎视图
         // 使用微延迟确保UI已经完成渲染
         Future.delayed(const Duration(milliseconds: 300), () {
           if (mounted) {
@@ -83,6 +145,7 @@ class _ConversationPageState extends State<ConversationPage> {
         });
       }
     } catch (e) {
+      debugPrint('===> ConversationPage: 加载会话失败: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('加载会话失败: $e')),
       );
@@ -104,13 +167,18 @@ class _ConversationPageState extends State<ConversationPage> {
     try {
       await chatService.createNewConversation();
       
-      // 导航到首页（而不是直接刷新当前页面）
       if (mounted) {
-        Navigator.pushReplacementNamed(
-          context, 
-          '/home',
-          arguments: {'conversationId': chatService.currentConversation?.id}
-        );
+        // 如果有回调函数，使用回调重置到默认聊天页面（tab内导航）
+        if (widget.onNewConversation != null) {
+          widget.onNewConversation!();
+        } else {
+          // 否则使用原来的导航逻辑（独立页面导航）
+          Navigator.pushReplacementNamed(
+            context, 
+            '/home',
+            arguments: {'conversationId': chatService.currentConversation?.id}
+          );
+        }
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -128,10 +196,72 @@ class _ConversationPageState extends State<ConversationPage> {
     final message = _messageController.text.trim();
     if (message.isEmpty) return;
     
+    // 隐藏欢迎视图
+    if (_showWelcomeView) {
+      setState(() {
+        _showWelcomeView = false;
+      });
+    }
+    
+    // 检查是否是初始问题，如果是则标记为已发送
+    final isInitialQuestion = message == widget.initialQuestion;
+    if (isInitialQuestion) {
+      _hasInitialQuestionSent = true;
+      // 通知HomePage清除初始数据
+      if (widget.onInitialQuestionSent != null) {
+        widget.onInitialQuestionSent!();
+      }
+    }
+
     _messageController.clear();
     
     final chatService = Provider.of<ChatService>(context, listen: false);
-    await chatService.sendMessageStream(message);
+    
+    // 记录发送前的会话状态
+    final hadConversationBefore = chatService.currentConversation != null;
+    final conversationIdBefore = chatService.currentConversation?.id;
+    
+    try {
+      // 如果有产品信息且是首次发送消息，则包含产品信息
+      if (_hasProductInfo && isInitialQuestion) {
+        debugPrint('===> ConversationPage: 发送包含产品信息的消息');
+        await chatService.sendMessageStreamWithInputs(
+          message,
+          inputs: {'text': widget.productInfo!},
+        );
+        // 标记产品信息已使用，后续消息不再包含
+        _hasProductInfo = false;
+      } else {
+        await chatService.sendMessageStream(message);
+      }
+      
+      // 检查会话状态变化，使用多次检查确保捕获到变化
+      for (int i = 0; i < 10; i++) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        
+        final currentConversation = chatService.currentConversation;
+        if (currentConversation != null) {
+          final currentConversationId = currentConversation.id;
+          
+          // 如果之前没有会话或会话ID发生了变化，说明创建了新会话
+          if ((!hadConversationBefore || conversationIdBefore != currentConversationId)) {
+            debugPrint('===> ConversationPage: 检测到会话创建/变化: $currentConversationId');
+            
+            // 通知HomePage更新conversationId
+            if (widget.onConversationCreated != null) {
+              widget.onConversationCreated!(currentConversationId);
+            }
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('===> ConversationPage: 发送消息失败: $e');
+      // 处理发送失败的情况
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('发送消息失败: $e')),
+      );
+    }
     
     // 滚动到底部
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -182,24 +312,46 @@ class _ConversationPageState extends State<ConversationPage> {
     
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: const Color(0xFF6A1B9A),
+        foregroundColor: Colors.white,
+        elevation: 1,
         leading: IconButton(
-          icon: const Icon(Icons.menu),
+          icon: const Icon(Icons.arrow_back_ios),
           onPressed: () {
-            // 导航到菜单页面
-            Navigator.pushNamed(context, '/menu');
+            // 如果有返回回调，使用回调；否则使用默认的 Navigator.pop
+            if (widget.onBack != null) {
+              widget.onBack!();
+            } else {
+              Navigator.of(context).pop();
+            }
           },
         ),
         title: Consumer<ChatService>(
           builder: (context, chatService, child) {
             final conversation = chatService.currentConversation;
+            final selectedModule = chatService.selectedModule;
             return Text(
-              conversation?.name ?? '新对话',
-              style: const TextStyle(color: Colors.white),
+              conversation?.name ?? selectedModule?.appInfo?.name ?? '智能助手',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
             );
           },
         ),
         actions: [
-          // 右侧新建对话按钮
+          // 菜单按钮
+          IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const MenuPage(),
+                ),
+              );
+            },
+          ),
+          // 新建对话按钮
           IconButton(
             icon: const Icon(Icons.add_circle_outline),
             onPressed: _createNewConversation,
@@ -231,9 +383,43 @@ class _ConversationPageState extends State<ConversationPage> {
       builder: (context, chatService, child) {
         final messages = chatService.messages;
         final suggestedQuestions = chatService.suggestedQuestions;
+        final selectedModule = chatService.selectedModule;
+        
+        // 如果没有消息且应该显示欢迎视图
+        if (messages.isEmpty && _showWelcomeView && selectedModule != null) {
+          return _buildWelcomeView(selectedModule);
+        }
         
         if (messages.isEmpty) {
-          return _buildWelcomeView(chatService);
+          // 简化的空状态显示
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.chat_bubble_outline,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '开始新的对话',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '在下方输入框输入您的问题',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          );
         }
         
         // 将每条消息拆分为用户问题和AI回答两个独立项
@@ -324,74 +510,6 @@ class _ConversationPageState extends State<ConversationPage> {
     );
   }
   
-  Widget _buildWelcomeView(ChatService chatService) {
-    // 如果没有选中模块，显示默认欢迎视图
-    if (chatService.selectedModule == null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(
-              Icons.smart_toy_outlined,
-              size: 64,
-              color: Colors.grey,
-            ),
-            SizedBox(height: 16),
-            Text(
-              '请选择一个AI模块开始对话',
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final selectedModule = chatService.selectedModule!;
-    final parameters = selectedModule.parameters;
-    final appInfo = selectedModule.appInfo;
-    
-    // 如果参数和应用信息都不可用，显示加载中
-    if (parameters == null || appInfo == null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(color: Theme.of(context).primaryColor),
-            const SizedBox(height: 16),
-            const Text('加载AI模块信息...'),
-          ],
-        ),
-      );
-    }
-    
-    // 使用AIWelcomeView组件展示AI模块欢迎界面
-    return AIWelcomeView(
-      moduleName: appInfo.name,
-      parameters: parameters,
-      onSubmit: (formData) async {
-        // 如果包含question字段，直接发送问题
-        if (formData.containsKey('question')) {
-          _messageController.text = formData['question']!;
-          await _sendMessage();
-          return;
-        }
-        
-        // 否则，拼接所有表单数据为一条消息发送
-        final message = formData.entries
-            .map((entry) => '${entry.key}: ${entry.value}')
-            .join('\n');
-        
-        if (message.isNotEmpty) {
-          _messageController.text = message;
-          await _sendMessage();
-        }
-      },
-    );
-  }
-  
   Widget _buildInputArea() {
     return Consumer<ChatService>(
       builder: (context, chatService, child) {
@@ -414,24 +532,42 @@ class _ConversationPageState extends State<ConversationPage> {
             children: [
               // 输入框
               Expanded(
-                child: TextField(
-                  controller: _messageController,
-                  decoration: InputDecoration(
-                    hintText: '输入消息...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide.none,
+                child: Focus(
+                  onKeyEvent: (node, event) {
+                    // 检测Ctrl+Enter组合键
+                    if (event is KeyDownEvent &&
+                        event.logicalKey == LogicalKeyboardKey.enter &&
+                        (HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.controlLeft) ||
+                         HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.controlRight) ||
+                         HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.metaLeft) ||
+                         HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.metaRight))) {
+                      // Ctrl+Enter或Cmd+Enter发送消息
+                      _sendMessage();
+                      return KeyEventResult.handled;
+                    }
+                    return KeyEventResult.ignored;
+                  },
+                  child: TextField(
+                    controller: _messageController,
+                    maxLines: null, // 允许无限行
+                    minLines: 1, // 最小1行
+                    keyboardType: TextInputType.multiline, // 多行键盘类型
+                    decoration: InputDecoration(
+                      hintText: '输入消息... (Ctrl+Enter发送)',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.withAlpha(26),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
                     ),
-                    filled: true,
-                    fillColor: Colors.grey.withAlpha(26),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
+                    textInputAction: TextInputAction.newline, // 改为换行而不是发送
+                    enabled: !isSending,
                   ),
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => _sendMessage(),
-                  enabled: !isSending,
                 ),
               ),
               
@@ -453,6 +589,53 @@ class _ConversationPageState extends State<ConversationPage> {
           ),
         );
       },
+    );
+  }
+
+  /// 构建欢迎视图
+  Widget _buildWelcomeView(AIModule module) {
+    final parameters = module.parameters;
+    final appInfo = module.appInfo;
+
+    if (parameters == null || appInfo == null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              color: Theme.of(context).primaryColor,
+            ),
+            const SizedBox(height: 16),
+            const Text('加载AI模块信息...'),
+          ],
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: AIWelcomeView(
+        moduleName: appInfo.name,
+        parameters: parameters,
+        onSubmit: (formData) async {
+          // 处理表单提交
+          if (formData.containsKey('question')) {
+            _messageController.text = formData['question']!;
+            await _sendMessage();
+            return;
+          }
+          
+          // 拼接表单数据为消息
+          final message = formData.entries
+              .map((entry) => '${entry.key}: ${entry.value}')
+              .join('\n');
+          
+          if (message.isNotEmpty) {
+            _messageController.text = message;
+            await _sendMessage();
+          }
+        },
+      ),
     );
   }
   

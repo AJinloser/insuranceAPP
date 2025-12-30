@@ -105,7 +105,7 @@ class _AIWelcomeViewState extends State<AIWelcomeView> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    '建议的问题:',
+                    '参考问题:',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

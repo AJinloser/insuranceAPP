@@ -11,7 +11,6 @@ from app.schemas.insurance_product import (
     ProductTypesResponse,
     ProductFieldsResponse,
     ProductSearchResponse,
-    create_product_detail_model,
 )
 
 router = APIRouter()
@@ -59,10 +58,8 @@ async def search_products(
     product_type: str = Query(..., description="产品类型"),
     page: int = Query(1, ge=1, description="页码"),
     limit: int = Query(10, ge=1, le=100, description="每页条数"),
-    sort_by: str = Query("total_score", description="排序字段"),
+    sort_by: Optional[str] = Query(None, description="排序字段，为空则按默认顺序"),
     sort_order: str = Query("desc", description="排序方向 (asc/desc)"),
-    product_name: Optional[str] = Query(None, description="产品名称，支持模糊搜索"),
-    company_name: Optional[str] = Query(None, description="公司名称，支持模糊搜索"),
     db: Session = Depends(get_db),
 ) -> Any:
     """
@@ -72,58 +69,52 @@ async def search_products(
     - product_type: 产品类型，必须是有效的产品类型，可通过/product_types接口获取
     - page: 页码，默认为1
     - limit: 每页条数，默认为10，最大为100
-    - sort_by: 排序字段，默认为total_score
+    - sort_by: 排序字段，默认为空（按数据库默认顺序）
     - sort_order: 排序方向，asc为升序，desc为降序，默认为desc
     
-    ## 常用筛选参数
-    - product_name: 产品名称，支持模糊搜索
-    - company_name: 公司名称，支持模糊搜索
-    
     ## 动态筛选参数
-    每种保险产品类型都有特定的字段可用于筛选，可以通过/product_fields接口获取特定产品类型的所有字段。
-    对于数值型字段，支持范围筛选，格式为：field_name_min和field_name_max，例如：
-    - premium_min: 最低保费
-    - premium_max: 最高保费
+    每种保险产品类型都有特定的字段可用于筛选，可以通过/product_fields接口获取。
     
-    所有筛选参数均为可选，不提供则不进行筛选。
+    ### 数值型字段筛选
+    支持使用数学符号进行比较：
+    - '>值': 大于，例如 entry_age_min_years=>18
+    - '>=值': 大于等于，例如 entry_age_max_years=>=65
+    - '<值': 小于，例如 waiting_period=<90
+    - '<=值': 小于等于，例如 limitation_years=<=5
+    - '=值': 等于，例如 grace_days==60
+    - 直接数值: 精确匹配，例如 free_look_days=15
     
-    示例：
-    - /search?product_type=wholelife&page=1&limit=10&sort_by=total_score&company_name=中荷人寿&product_name=荣耀
-    - /search?product_type=termlife&premium_min=1000&premium_max=5000
+    ### 布尔型字段筛选
+    直接传true/false，例如：has_tpd_cover=true
+    
+    ### 文本型字段筛选
+    支持模糊匹配，例如：product_name=寿险
+    
+    ## 示例
+    - 基本搜索: /search?product_type=term_life&page=1&limit=10
+    - 数学符号筛选: /search?product_type=term_life&entry_age_min_years=>=18&entry_age_max_years=<=65
+    - 组合筛选: /search?product_type=term_life&has_tpd_cover=true&waiting_period=<180&product_name=定期
+    - 排序: /search?product_type=term_life&sort_by=entry_age_min_years&sort_order=asc
     """
-    # 获取查询参数
-    filters = {}
-    if product_name:
-        filters["product_name"] = product_name
-    if company_name:
-        filters["company_name"] = company_name
-    
     # 获取所有查询参数
     query_params = dict(request.query_params)
     
-    # 处理范围筛选参数（字段名_min和字段名_max）
-    range_filters = {}
+    # 获取该产品类型的所有字段信息
+    fields_info = InsuranceProductCRUD.get_product_fields(product_type)
+    valid_fields = {f['name'] for f in fields_info}
     
-    # 处理其他动态参数
+    # 处理筛选参数
+    filters = {}
+    
+    # 处理动态参数
     for key, value in query_params.items():
-        if key not in ["product_type", "page", "limit", "sort_by", "sort_order", "product_name", "company_name", "user_id"]:
-            # 处理范围查询参数
-            if key.endswith("_min") or key.endswith("_max"):
-                base_field = key[:-4]  # 去掉_min或_max后缀
-                if base_field not in range_filters:
-                    range_filters[base_field] = {}
-                
-                if key.endswith("_min"):
-                    range_filters[base_field]["min"] = value
-                else:
-                    range_filters[base_field]["max"] = value
-            else:
-                # 普通参数
-                filters[key] = value
-    
-    # 将范围筛选参数添加到filters中
-    for field, range_value in range_filters.items():
-        filters[field] = range_value
+        # 跳过系统参数
+        if key in ["product_type", "page", "limit", "sort_by", "sort_order", "user_id"]:
+            continue
+        
+        # 只添加有效字段
+        if key in valid_fields:
+            filters[key] = value
     
     # 查询产品
     products, total_pages = InsuranceProductCRUD.search_products(
@@ -154,7 +145,7 @@ def get_product_info(
     
     必须指定产品类型和产品ID，以便在正确的表中查询
     
-    注意：此API不再使用固定的响应模型，而是根据产品类型动态生成响应模型
+    返回：包含中文字段名的产品详细信息
     """
     product = InsuranceProductCRUD.get_product_info(db, product_id, product_type)
     
@@ -164,10 +155,7 @@ def get_product_info(
             "message": "未找到指定产品"
         }
     
-    # 使用创建的动态响应模型
-    response_model = create_product_detail_model(product)
-    
-    # 创建响应
+    # 创建响应（使用中文字段名）
     response_data = {
         "code": 200,
         "message": "获取保险产品信息成功"
@@ -176,5 +164,4 @@ def get_product_info(
     # 添加产品信息到响应
     response_data.update(product)
     
-    # 验证并返回响应
-    return response_model(**response_data) 
+    return response_data 

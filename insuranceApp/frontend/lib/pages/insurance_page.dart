@@ -1,466 +1,577 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../models/insurance_product.dart';
-import '../services/insurance_service.dart';
-import '../widgets/insurance_product_card.dart';
-import 'product_detail_page.dart';
+import 'insurance_search_page.dart';
 import 'user_insurance_list_page.dart';
+import 'quick_insurance_build_page.dart'; // Added import for QuickInsuranceBuildPage
 
-class InsurancePage extends StatefulWidget {
+class InsurancePage extends StatelessWidget {
   const InsurancePage({Key? key}) : super(key: key);
 
   @override
-  State<InsurancePage> createState() => _InsurancePageState();
-}
-
-class _InsurancePageState extends State<InsurancePage> with TickerProviderStateMixin {
-  late TabController _tabController;
-  late InsuranceService _insuranceService;
-  final TextEditingController _searchController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
-
-  int _totalPages = 0;
-  bool _showFilterDialog = false;
-  Map<String, dynamic> _currentFilters = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _insuranceService = InsuranceService();
-    _tabController = TabController(length: 0, vsync: this);
-    _initializeData();
-  }
-
-  Future<void> _initializeData() async {
-    await _insuranceService.getProductTypes();
-    if (_insuranceService.productTypes.isNotEmpty) {
-      // 重新创建TabController
-      _tabController.dispose();
-      _tabController = TabController(
-        length: _insuranceService.productTypes.length,
-        vsync: this,
-      );
-      
-      // 监听tab切换
-      _tabController.addListener(_handleTabSelection);
-      
-      // 加载第一个类型的产品
-      await _loadProducts();
-    }
-  }
-
-  void _handleTabSelection() {
-    if (!_tabController.indexIsChanging) {
-      final selectedType = _insuranceService.productTypes[_tabController.index];
-      _switchProductType(selectedType);
-    }
-  }
-
-  Future<void> _loadProducts() async {
-    if (_insuranceService.currentProductType.isNotEmpty) {
-      final pages = await _insuranceService.searchProducts(
-        productType: _insuranceService.currentProductType,
-      );
-      setState(() {
-        _totalPages = pages;
-      });
-    }
-  }
-
-  Future<void> _switchProductType(String productType) async {
-    _currentFilters.clear();
-    _searchController.clear();
-    
-    final pages = await _insuranceService.switchProductType(productType);
-    setState(() {
-      _totalPages = pages;
-    });
-  }
-
-  Future<void> _search() async {
-    final searchParams = Map<String, dynamic>.from(_currentFilters);
-    
-    if (_searchController.text.isNotEmpty) {
-      searchParams['product_name'] = _searchController.text;
-    }
-    
-    final pages = await _insuranceService.updateSearchParams(searchParams);
-    setState(() {
-      _totalPages = pages;
-    });
-  }
-
-  Future<void> _resetSearch() async {
-    _searchController.clear();
-    _currentFilters.clear();
-    
-    final pages = await _insuranceService.resetSearch();
-    setState(() {
-      _totalPages = pages;
-    });
-  }
-
-  Future<void> _changePage(int page) async {
-    final pages = await _insuranceService.changePage(page);
-    setState(() {
-      _totalPages = pages;
-    });
-    
-    // 滚动到顶部
-    _scrollController.animateTo(
-      0,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-    );
-  }
-
-  Future<void> _changeSortBy(String sortBy) async {
-    final pages = await _insuranceService.changeSortBy(sortBy);
-    setState(() {
-      _totalPages = pages;
-    });
-  }
-
-  void _showProductDetail(InsuranceProduct product) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ProductDetailPage(
-          product: product,
-          productType: _insuranceService.currentProductType,
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        title: const Text('保险知识'),
+        backgroundColor: Theme.of(context).primaryColor,
+        elevation: 0,
+        foregroundColor: Colors.white,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 欢迎信息卡片
+            _buildWelcomeCard(context),
+            
+            const SizedBox(height: 24),
+            
+            // 服务介绍
+            _buildServiceIntroduction(context),
+            
+            const SizedBox(height: 24),
+            
+            // 主要功能卡片
+            _buildMainFeatureCards(context),
+          ],
         ),
       ),
     );
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _searchController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: _insuranceService,
-      child: Scaffold(
-        backgroundColor: Colors.grey[50],
-        appBar: AppBar(
-          title: const Text('保险产品'),
-          backgroundColor: Theme.of(context).primaryColor,
-          elevation: 0,
-          bottom: _insuranceService.productTypes.isNotEmpty
-              ? TabBar(
-                  controller: _tabController,
-                  isScrollable: true,
-                  indicatorColor: Colors.white,
-                  indicatorWeight: 3,
-                  labelColor: Colors.white,
-                  unselectedLabelColor: Colors.white70,
-                  labelStyle: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                  tabs: _insuranceService.productTypes
-                      .map((type) => Tab(text: type))
-                      .toList(),
-                )
-              : null,
+  /// 构建欢迎信息卡片
+  Widget _buildWelcomeCard(BuildContext context) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Theme.of(context).primaryColor,
+              Theme.of(context).primaryColor.withValues(alpha: 0.8),
+            ],
         ),
-        body: Consumer<InsuranceService>(
-          builder: (context, service, child) {
-            if (service.productTypes.isEmpty && service.isLoading) {
-              return const Center(
-                child: CircularProgressIndicator(),
-              );
-            }
-
-            if (service.error != null) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: Colors.grey[400],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      service.error!,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 16,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _initializeData,
-                      child: const Text('重试'),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            if (service.productTypes.isEmpty) {
-              return const Center(
-                child: Text('暂无保险产品类型'),
-              );
-            }
-
-            return Column(
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                // 搜索栏
-                _buildSearchBar(),
-                
-                // 产品列表
+                const Icon(
+                  Icons.shield_outlined,
+                  color: Colors.white,
+                  size: 32,
+                ),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: _buildProductList(service),
+                  child: Text(
+                    '保险知识中心',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 2,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // 搜索输入框
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: '搜索产品名称',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey[300]!),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Theme.of(context).primaryColor),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                  ),
-                  onSubmitted: (_) => _search(),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // 筛选按钮
-              IconButton(
-                onPressed: () => _showFilterBottomSheet(),
-                icon: Stack(
-                  children: [
-                    const Icon(Icons.filter_list),
-                    if (_currentFilters.isNotEmpty)
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.grey[100],
-                  foregroundColor: Colors.grey[700],
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 12),
-          
-          // 操作按钮行
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _search,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  child: const Text('搜索'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _resetSearch,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.grey[700],
-                    side: BorderSide(color: Colors.grey[300]!),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  child: const Text('重置'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // 排序按钮
-              _buildSortButton(),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSortButton() {
-    return PopupMenuButton<String>(
-      onSelected: _changeSortBy,
-      itemBuilder: (context) {
-        return [
-          const PopupMenuItem(
-            value: 'total_score',
-            child: Text('评分排序'),
-          ),
-          const PopupMenuItem(
-            value: 'premium',
-            child: Text('保费排序'),
-          ),
-          const PopupMenuItem(
-            value: 'company_name',
-            child: Text('公司排序'),
-          ),
-        ];
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[300]!),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.sort, size: 18, color: Colors.grey[700]),
-            const SizedBox(width: 4),
-            Text(
-              '排序',
-              style: TextStyle(color: Colors.grey[700], fontSize: 14),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProductList(InsuranceService service) {
-    if (service.isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
-
-    if (service.products.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.search_off,
-              size: 64,
-              color: Colors.grey[400],
-            ),
+            
             const SizedBox(height: 16),
+            
             Text(
-              '没有找到相关产品',
+              '为您提供全面的保险产品搜索和保单管理功能',
               style: TextStyle(
-                color: Colors.grey[600],
                 fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '试试调整搜索条件或筛选条件',
-              style: TextStyle(
-                color: Colors.grey[500],
-                fontSize: 14,
+                color: Colors.white.withValues(alpha: 0.9),
+                height: 1.4,
               ),
             ),
           ],
         ),
-      );
-    }
+      ),
+    );
+  }
 
-    return ListView(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
+  /// 构建服务介绍
+  Widget _buildServiceIntroduction(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 产品列表
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: service.products.length,
-          itemBuilder: (context, index) {
-            final product = service.products[index];
-            return InsuranceProductCard(
-              product: product,
-              onViewDetails: () => _showProductDetail(product),
-            );
-          },
+        Text(
+          '我们提供什么功能？',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+        ),
         ),
         
-        // 分页器
-        if (_totalPages > 1) _buildPagination(),
+        const SizedBox(height: 16),
         
-        // "我的保单"卡片
-        _buildMyInsuranceCard(),
+        // 功能介绍列表
+        _buildFeatureListItem(
+        context,
+          icon: Icons.search,
+          title: '智能搜索',
+          description: '按类型搜索保险产品，支持多条件筛选和对比',
+          color: Colors.blue,
+          ),
+        
+        const SizedBox(height: 12),
+        
+        _buildFeatureListItem(
+          context,
+          icon: Icons.assignment,
+          title: '保单管理',
+          description: '管理您已添加的保险产品，支持分析和删除',
+          color: Colors.green,
+        ),
+        
+        const SizedBox(height: 12),
+        
+        _buildFeatureListItem(
+          context,
+          icon: Icons.compare_arrows,
+          title: '产品对比',
+          description: '选择多个保险产品进行智能对比分析',
+          color: Colors.orange,
+        ),
+        
+        const SizedBox(height: 12),
+        
+        _buildFeatureListItem(
+          context,
+          icon: Icons.chat_bubble_outline,
+          title: 'AI教育',
+          description: '与AI助手对话，获取个性化保险知识',
+          color: Colors.purple,
+                    ),
       ],
     );
   }
 
-  /// 构建"我的保单"卡片
-  Widget _buildMyInsuranceCard() {
+  /// 构建功能列表项
+  Widget _buildFeatureListItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String description,
+    required Color color,
+  }) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 16),
-      child: GestureDetector(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 24,
+              ),
+          ),
+          
+          const SizedBox(width: 16),
+          
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                ),
+              ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                    height: 1.3,
+                  ),
+                ),
+              ],
+              ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 构建主要功能卡片
+  Widget _buildMainFeatureCards(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+          '选择您需要的功能',
+              style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+              ),
+            ),
+        
+        const SizedBox(height: 16),
+        
+        // 搜索保险产品卡片
+        _buildSearchInsuranceCard(context),
+        
+        const SizedBox(height: 16),
+        
+        // 快速构筑卡片
+        _buildQuickBuildCard(context),
+        
+        const SizedBox(height: 16),
+        
+        // 我的保单卡片
+        _buildMyInsuranceCard(context),
+      ],
+    );
+  }
+
+  /// 构建搜索保险产品卡片
+  Widget _buildSearchInsuranceCard(BuildContext context) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const InsuranceSearchPage(),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              // 图标和标题
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade100,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      Icons.search,
+                      color: Colors.blue.shade700,
+                      size: 32,
+                    ),
+                  ),
+                  
+                  const SizedBox(width: 16),
+                  
+                  Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+                        Text(
+                          '搜索保险产品',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '浏览和搜索各种保险产品',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.blue.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.blue.shade600,
+                    size: 20,
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 20),
+              
+              // 功能介绍
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+            Row(
+              children: [
+                Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.blue.shade700,
+                          size: 16,
+                ),
+                const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '按类型浏览：定期寿险、重疾险、医疗险等',
+                  style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.blue.shade800,
+                            ),
+                  ),
+                ),
+              ],
+            ),
+            
+                    const SizedBox(height: 8),
+            
+            Row(
+              children: [
+                        Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.blue.shade700,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                            '多条件筛选：保费、保额、公司等',
+                    style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.blue.shade800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            
+                    const SizedBox(height: 8),
+                    
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.blue.shade700,
+                          size: 16,
+                  ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                child: Text(
+                            '产品对比：最多同时对比2个产品',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.blue.shade800,
+                ),
+              ),
+            ),
+          ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 构建快速构筑卡片
+  Widget _buildQuickBuildCard(BuildContext context) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const QuickInsuranceBuildPage(),
+            ),
+    );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              // 图标和标题
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade100,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      Icons.auto_awesome,
+                      color: Colors.green.shade700,
+                      size: 32,
+                    ),
+                  ),
+                  
+                  const SizedBox(width: 16),
+                  
+                  Expanded(
+                    child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                          '快速保险知识分析',
+                          style: TextStyle(
+                            fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                            color: Colors.green.shade800,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                          '基于您的个人信息智能分析',
+                style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.green.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.green.shade600,
+                    size: 20,
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 20),
+              
+              // 功能介绍
+              Container(
+                padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.green.shade700,
+                size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'AI分析：基于您的年龄、收入、风险偏好等信息',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.green.shade800,
+            ),
+          ),
+        ),
+      ],
+                    ),
+                    
+                    const SizedBox(height: 8),
+                    
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.green.shade700,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '智能分析：为您提供定制化的保险产品知识',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.green.shade800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 8),
+                    
+                    Row(
+        children: [
+          Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.green.shade700,
+                          size: 16,
+          ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '专业教育：专业的保险规划方案和学习指导',
+            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.green.shade800,
+                            ),
+                          ),
+                        ),
+                      ],
+            ),
+                  ],
+                ),
+          ),
+        ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 构建我的保单卡片
+  Widget _buildMyInsuranceCard(BuildContext context) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: InkWell(
         onTap: () {
           Navigator.push(
             context,
@@ -469,204 +580,140 @@ class _InsurancePageState extends State<InsurancePage> with TickerProviderStateM
             ),
           );
         },
-        child: Card(
-          elevation: 3,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.purple.shade100,
-                  Colors.purple.shade50,
-                ],
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              // 图标和标题
+              Row(
+                children: [
+              Container(
+                    padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                      color: Colors.purple.shade100,
+                      borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  Icons.assignment,
+                  color: Colors.purple.shade700,
+                      size: 32,
+                ),
               ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                // 图标
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.purple.shade200.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(50),
-                  ),
-                  child: Icon(
-                    Icons.assignment,
-                    color: Colors.purple.shade700,
-                    size: 24,
-                  ),
-                ),
-                
-                const SizedBox(width: 16),
-                
-                // 文字内容
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '我的保单',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.purple.shade800,
-                        ),
+              
+              const SizedBox(width: 16),
+              
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '我的保单',
+                      style: TextStyle(
+                            fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple.shade800,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '查看和管理您已添加的保险产品',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.purple.shade600,
-                        ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                          '管理您已添加的保险产品',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.purple.shade600,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                
-                // 箭头
-                Icon(
-                  Icons.arrow_forward_ios,
-                  color: Colors.purple.shade600,
-                  size: 16,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPagination() {
-    return Container(
-      margin: const EdgeInsets.only(top: 24),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // 上一页
-          IconButton(
-            onPressed: _insuranceService.currentPage > 1
-                ? () => _changePage(_insuranceService.currentPage - 1)
-                : null,
-            icon: const Icon(Icons.chevron_left),
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Theme.of(context).primaryColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
               ),
-            ),
+              
+              Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.purple.shade600,
+                    size: 20,
+              ),
+            ],
           ),
+              
+              const SizedBox(height: 20),
           
-          const SizedBox(width: 16),
-          
-          // 页码显示
+              // 功能介绍
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[300]!),
+                  color: Colors.purple.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.purple.shade700,
+                          size: 16,
             ),
+                        const SizedBox(width: 8),
+                        Expanded(
             child: Text(
-              '${_insuranceService.currentPage} / $_totalPages',
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          
-          const SizedBox(width: 16),
-          
-          // 下一页
-          IconButton(
-            onPressed: _insuranceService.currentPage < _totalPages
-                ? () => _changePage(_insuranceService.currentPage + 1)
-                : null,
-            icon: const Icon(Icons.chevron_right),
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Theme.of(context).primaryColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                            '查看保单详情：查看已添加的保险产品信息',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.purple.shade800,
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  void _showFilterBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.6,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 标题栏
+                    
+                    const SizedBox(height: 8),
+                    
             Row(
               children: [
-                const Text(
-                  '筛选条件',
+                        Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.purple.shade700,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '保单管理：删除不需要的保险产品',
                   style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                              fontSize: 13,
+                              color: Colors.purple.shade800,
+                            ),
                 ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () {
-                    _currentFilters.clear();
-                    Navigator.pop(context);
-                  },
-                  child: const Text('清空'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _search();
-                  },
-                  child: const Text('确定'),
                 ),
               ],
             ),
             
-            const Divider(),
+                    const SizedBox(height: 8),
             
-            // 筛选字段列表
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline,
+                          color: Colors.purple.shade700,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
             Expanded(
-              child: ListView(
-                children: [
-                  // TODO: 基于productFields动态生成筛选表单
-                  const Center(
                     child: Text(
-                      '筛选功能开发中...',
+                            'AI分析：获取个性化的保单分析知识',
                       style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 16,
+                              fontSize: 13,
+                              color: Colors.purple.shade800,
                       ),
                     ),
+                        ),
+                      ],
                   ),
                 ],
               ),
             ),
           ],
+          ),
         ),
       ),
     );

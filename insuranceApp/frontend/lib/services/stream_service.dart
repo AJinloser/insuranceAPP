@@ -6,6 +6,11 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/stream_models.dart';
 
 /// 流式服务类，用于处理Dify API的SSE（Server-Sent Events）流式响应
+/// 
+/// 优化要点：
+/// 1. 使用自定义SSE解析器，立即处理每个数据块，避免等待缓冲
+/// 2. 采用StringBuffer增量解析，支持跨chunk的消息处理
+/// 3. 模块化的响应解析逻辑，提高代码可维护性
 class StreamService {
   // 基础URL
   final String baseUrl = dotenv.env['DIFY_API_BASE_URL'] ?? 'http://47.238.246.199/v1';
@@ -55,61 +60,57 @@ class StreamService {
         return;
       }
 
-      // 将字节流转换为字符串流
-      final stream = response.stream
-          .transform(utf8.decoder)
-          .transform(const LineSplitter());
-
-      await for (var line in stream) {
-        if (line.trim().isEmpty) continue;
+      // 优化的SSE流处理：使用自定义解析器，立即处理每个数据块
+      StringBuffer buffer = StringBuffer();
+      
+      await for (var chunk in response.stream.transform(utf8.decoder)) {
+        buffer.write(chunk);
+        var content = buffer.toString();
         
-        if (line.startsWith('data:')) {
-          final jsonContent = line.substring(5).trim();
-          try {
-            final data = jsonDecode(jsonContent);
-            final eventType = data['event'] as String?;
+        // 处理所有完整的SSE消息（以\n\n分隔）
+        while (content.contains('\n\n')) {
+          final index = content.indexOf('\n\n');
+          final message = content.substring(0, index);
+          content = content.substring(index + 2);
+          buffer.clear();
+          buffer.write(content);
+          
+          // 解析并处理单个SSE消息
+          final lines = message.split('\n');
+          for (var line in lines) {
+            if (line.trim().isEmpty) continue;
             
-            // 根据事件类型创建不同的响应对象
-            if (eventType == 'message') {
-              final messageResponse = MessageResponse.fromJson(data);
-              if (onMessage != null) onMessage(messageResponse);
-              yield messageResponse;
-            } else if (eventType == 'message_end') {
-              final messageEndResponse = MessageEndResponse.fromJson(data);
-              if (onMessageEnd != null) onMessageEnd(messageEndResponse);
-              yield messageEndResponse;
-            } else if (eventType == 'error') {
-              final errorResponse = ErrorResponse.fromJson(data);
-              if (onError != null) onError(errorResponse);
-              yield errorResponse;
-            } else if (eventType == 'workflow_started') {
-              final workflowStartedResponse = WorkflowStartedResponse.fromJson(data);
-              if (onWorkflowStarted != null) onWorkflowStarted(workflowStartedResponse);
-              yield workflowStartedResponse;
-            } else if (eventType == 'workflow_finished') {
-              final workflowFinishedResponse = WorkflowFinishedResponse.fromJson(data);
-              if (onWorkflowFinished != null) onWorkflowFinished(workflowFinishedResponse);
-              yield workflowFinishedResponse;
-            } else if (eventType == 'node_started') {
-              final nodeStartedResponse = NodeStartedResponse.fromJson(data);
-              if (onNodeStarted != null) onNodeStarted(nodeStartedResponse);
-              yield nodeStartedResponse;
-            } else if (eventType == 'node_finished') {
-              final nodeFinishedResponse = NodeFinishedResponse.fromJson(data);
-              if (onNodeFinished != null) onNodeFinished(nodeFinishedResponse);
-              yield nodeFinishedResponse;
-            } else {
-              yield StreamResponse(event: eventType ?? 'unknown');
+            if (line.startsWith('data:')) {
+              final jsonContent = line.substring(5).trim();
+              if (jsonContent.isEmpty) continue;
+              
+              try {
+                final data = jsonDecode(jsonContent);
+                final response = _parseStreamResponse(
+                  data,
+                  onMessage: onMessage,
+                  onMessageEnd: onMessageEnd,
+                  onError: onError,
+                  onWorkflowStarted: onWorkflowStarted,
+                  onWorkflowFinished: onWorkflowFinished,
+                  onNodeStarted: onNodeStarted,
+                  onNodeFinished: onNodeFinished,
+                );
+                
+                if (response != null) {
+                  yield response;
+                }
+              } catch (e) {
+                debugPrint('解析JSON时出错: $e, 内容: $jsonContent');
+                final errorResponse = ErrorResponse(
+                  status: 400,
+                  code: 'parse_error',
+                  message: '解析响应时出错: $e',
+                );
+                if (onError != null) onError(errorResponse);
+                yield errorResponse;
+              }
             }
-          } catch (e) {
-            debugPrint('解析JSON时出错: $e, 内容: $jsonContent');
-            final errorResponse = ErrorResponse(
-              status: 400,
-              code: 'parse_error',
-              message: '解析响应时出错: $e',
-            );
-            if (onError != null) onError(errorResponse);
-            yield errorResponse;
           }
         }
       }
@@ -124,6 +125,60 @@ class StreamService {
       yield errorResponse;
     } finally {
       client.close();
+    }
+  }
+
+  /// 解析流式响应数据
+  StreamResponse? _parseStreamResponse(
+    Map<String, dynamic> data, {
+    Function(StreamResponse)? onMessage,
+    Function(MessageEndResponse)? onMessageEnd,
+    Function(ErrorResponse)? onError,
+    Function(WorkflowStartedResponse)? onWorkflowStarted,
+    Function(WorkflowFinishedResponse)? onWorkflowFinished,
+    Function(NodeStartedResponse)? onNodeStarted,
+    Function(NodeFinishedResponse)? onNodeFinished,
+  }) {
+    final eventType = data['event'] as String?;
+    
+    switch (eventType) {
+      case 'message':
+        final messageResponse = MessageResponse.fromJson(data);
+        onMessage?.call(messageResponse);
+        return messageResponse;
+        
+      case 'message_end':
+        final messageEndResponse = MessageEndResponse.fromJson(data);
+        onMessageEnd?.call(messageEndResponse);
+        return messageEndResponse;
+        
+      case 'error':
+        final errorResponse = ErrorResponse.fromJson(data);
+        onError?.call(errorResponse);
+        return errorResponse;
+        
+      case 'workflow_started':
+        final workflowStartedResponse = WorkflowStartedResponse.fromJson(data);
+        onWorkflowStarted?.call(workflowStartedResponse);
+        return workflowStartedResponse;
+        
+      case 'workflow_finished':
+        final workflowFinishedResponse = WorkflowFinishedResponse.fromJson(data);
+        onWorkflowFinished?.call(workflowFinishedResponse);
+        return workflowFinishedResponse;
+        
+      case 'node_started':
+        final nodeStartedResponse = NodeStartedResponse.fromJson(data);
+        onNodeStarted?.call(nodeStartedResponse);
+        return nodeStartedResponse;
+        
+      case 'node_finished':
+        final nodeFinishedResponse = NodeFinishedResponse.fromJson(data);
+        onNodeFinished?.call(nodeFinishedResponse);
+        return nodeFinishedResponse;
+        
+      default:
+        return StreamResponse(event: eventType ?? 'unknown');
     }
   }
 

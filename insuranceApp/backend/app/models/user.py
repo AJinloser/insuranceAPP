@@ -17,4 +17,5 @@ class User(Base):
     
     # 反向关系
     user_info = relationship("UserInfo", back_populates="user", uselist=False)
-    insurance_list = relationship("InsuranceList", back_populates="user", uselist=False) 
+    insurance_list = relationship("InsuranceList", back_populates="user", uselist=False)
+    goals = relationship("Goal", back_populates="user", uselist=False) 

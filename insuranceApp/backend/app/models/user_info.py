@@ -16,6 +16,7 @@ class UserInfo(Base):
     financial_info = Column(JSONB, nullable=True, default={})
     risk_info = Column(JSONB, nullable=True, default={})
     retirement_info = Column(JSONB, nullable=True, default={})
+    insurance_info = Column(JSONB, nullable=True, default={})
     family_info = Column(JSONB, nullable=True, default={})
     goal_info = Column(JSONB, nullable=True, default={})
     other_info = Column(JSONB, nullable=True, default={})

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/insurance_list_service.dart';
+import '../services/analysis_chat_service.dart';
+import '../services/settings_service.dart';
 import '../widgets/insurance_product_card.dart';
 import 'product_detail_page.dart';
 
@@ -14,6 +16,7 @@ class UserInsuranceListPage extends StatefulWidget {
 
 class _UserInsuranceListPageState extends State<UserInsuranceListPage> {
   late InsuranceListService _insuranceListService;
+  final AnalysisChatService _analysisChatService = AnalysisChatService();
   bool _isEditMode = false;
   Set<int> _selectedIndices = {};
 
@@ -116,6 +119,66 @@ class _UserInsuranceListPageState extends State<UserInsuranceListPage> {
             product: item.productDetail!,
             productType: item.productType,
           ),
+        ),
+      );
+    }
+  }
+
+  /// 启动保单分析
+  Future<void> _startAnalysisChat() async {
+    debugPrint('===> UserInsuranceListPage: 开始启动保单分析');
+    
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final userId = authService.userId;
+    
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('用户未登录，无法进行保单分析')),
+      );
+      return;
+    }
+    
+    // 检查是否有保单
+    if (_insuranceListService.insuranceList.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('您还没有保单，请先添加保险产品')),
+      );
+      return;
+    }
+    
+    // 显示加载对话框
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('正在启动保单分析...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    
+    try {
+      await _analysisChatService.startAnalysisChat(context, userId);
+      // 如果成功，对话框会自动关闭（因为页面跳转）
+    } catch (e) {
+      // 关闭加载对话框
+      Navigator.of(context).pop();
+      
+      // 显示错误信息
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('启动保单分析失败: $e'),
+          backgroundColor: Colors.red,
         ),
       );
     }
@@ -240,6 +303,54 @@ class _UserInsuranceListPageState extends State<UserInsuranceListPage> {
                     },
                   ),
                 ),
+                
+                // 保单分析按钮区域（根据功能开关显示）
+                Consumer<SettingsService>(
+                  builder: (context, settingsService, child) {
+                    if (service.insuranceList.isNotEmpty && !_isEditMode && settingsService.insuranceAnalysisEnabled) {
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, -2),
+                            ),
+                          ],
+                        ),
+                        child: SafeArea(
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _startAnalysisChat,
+                              icon: const Icon(Icons.analytics_outlined),
+                              label: const Text(
+                                '保单分析',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(context).primaryColor,
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size(double.infinity, 50),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+                
                 // 修改模式下的底部操作栏
                 if (_isEditMode)
                   Container(

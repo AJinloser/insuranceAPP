@@ -1,13 +1,12 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
 
 import '../models/dify_models.dart';
+import '../utils/error_logger.dart';
 
 /// Dify API服务类
 /// 用于与Dify API进行交互
@@ -21,14 +20,14 @@ class DifyService {
   factory DifyService() => _instance;
   
   DifyService._internal() {
-    _baseUrl = dotenv.env['DIFY_API_BASE_URL'] ?? 'http://47.238.246.199/v1';
+    _baseUrl = dotenv.env['DIFY_API_BASE_URL'] ?? 'http://skysail.top/v1';
     _apiKey = dotenv.env['DIFY_API_KEY'] ?? '';
     
     _dio = Dio(
       BaseOptions(
         baseUrl: _baseUrl,
         connectTimeout: const Duration(seconds: 30),
-        receiveTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 120), // 增加到120秒
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -61,6 +60,13 @@ class DifyService {
       final response = await _dio.get('/info');
       return AppInfo.fromJson(response.data);
     } catch (e) {
+      await logApiError(
+        message: '获取应用信息失败: $e',
+        userId: "",
+        apiEndpoint: '/info',
+        serviceName: 'DifyService',
+        stackTrace: e.toString(),
+      );
       throw _handleError(e);
     }
   }
@@ -101,6 +107,13 @@ class DifyService {
       final List<dynamic> conversationsData = response.data['data'];
       return conversationsData.map((json) => Conversation.fromJson(json)).toList();
     } catch (e) {
+      await logApiError(
+        message: '获取会话列表失败: $e',
+        userId: userId,
+        apiEndpoint: '/conversations',
+        serviceName: 'DifyService',
+        stackTrace: e.toString(),
+      );
       throw _handleError(e);
     }
   }
@@ -116,6 +129,13 @@ class DifyService {
         data: {'user': userId},
       );
     } catch (e) {
+      await logApiError(
+        message: '删除会话失败: $e',
+        userId: userId,
+        apiEndpoint: '/conversations/$conversationId',
+        serviceName: 'DifyService',
+        stackTrace: e.toString(),
+      );
       throw _handleError(e);
     }
   }
@@ -174,6 +194,13 @@ class DifyService {
       final List<dynamic> messagesData = response.data['data'];
       return messagesData.map((json) => ChatMessage.fromJson(json)).toList();
     } catch (e) {
+      await logApiError(
+        message: '获取会话历史消息失败: $e',
+        userId: userId,
+        apiEndpoint: '/messages',
+        serviceName: 'DifyService',
+        stackTrace: e.toString(),
+      );
       throw _handleError(e);
     }
   }
@@ -222,78 +249,6 @@ class DifyService {
     }
   }
   
-  /// 发送消息（流式模式）
-  Stream<StreamResponse> sendMessageStream({
-    required String query,
-    required String userId,
-    String? conversationId,
-    Map<String, dynamic>? inputs,
-    List<FileItem>? files,
-    bool? autoGenerateName,
-  }) async* {
-    try {
-      final Map<String, dynamic> data = {
-        'query': query,
-        'inputs': inputs ?? {},
-        'user': userId,
-        'response_mode': 'streaming',
-      };
-      
-      if (conversationId != null) {
-        data['conversation_id'] = conversationId;
-      }
-      
-      if (inputs != null) {
-        data['inputs'] = inputs;
-      }
-      
-      if (files != null) {
-        data['files'] = files.map((file) => file.toJson()).toList();
-      }
-      
-      if (autoGenerateName != null) {
-        data['auto_generate_name'] = autoGenerateName;
-      }
-      
-      // 使用http包实现SSE流式请求
-      final client = http.Client();
-      final request = http.Request('POST', Uri.parse('$_baseUrl/chat-messages'));
-      request.headers['Content-Type'] = 'application/json';
-      request.headers['Accept'] = 'text/event-stream';
-      request.headers['Authorization'] = 'Bearer $_apiKey';
-      request.body = jsonEncode(data);
-      
-      final streamedResponse = await client.send(request);
-      
-      if (streamedResponse.statusCode != 200) {
-        final response = await http.Response.fromStream(streamedResponse);
-        throw DifyApiException(
-          statusCode: streamedResponse.statusCode,
-          message: response.body,
-        );
-      }
-      
-      await for (final chunk in streamedResponse.stream.transform(utf8.decoder)) {
-        // 处理SSE格式的响应
-        for (final line in chunk.split('\n\n')) {
-          if (line.startsWith('data: ')) {
-            final jsonStr = line.substring(6).trim();
-            if (jsonStr.isNotEmpty) {
-              try {
-                final json = jsonDecode(jsonStr);
-                yield StreamResponse.fromJson(json);
-              } catch (e) {
-                debugPrint('Error parsing SSE data: $e');
-              }
-            }
-          }
-        }
-      }
-    } catch (e) {
-      throw _handleError(e);
-    }
-  }
-  
   /// 停止响应
   Future<void> stopResponse({
     required String taskId,
@@ -305,6 +260,13 @@ class DifyService {
         data: {'user': userId},
       );
     } catch (e) {
+      await logApiError(
+        message: '停止响应失败: $e',
+        userId: userId,
+        apiEndpoint: '/chat-messages/$taskId/stop',
+        serviceName: 'DifyService',
+        stackTrace: e.toString(),
+      );
       throw _handleError(e);
     }
   }
@@ -349,6 +311,13 @@ class DifyService {
       final List<dynamic> questions = response.data['data'];
       return questions.map((q) => q.toString()).toList();
     } catch (e) {
+      await logApiError(
+        message: '获取下一轮建议问题列表失败: $e',
+        userId: userId,
+        apiEndpoint: '/messages/$messageId/suggested',
+        serviceName: 'DifyService',
+        stackTrace: e.toString(),
+      );
       throw _handleError(e);
     }
   }

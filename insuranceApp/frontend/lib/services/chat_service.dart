@@ -16,6 +16,7 @@ import 'api_service.dart';
 import 'auth_service.dart';
 import '../models/stream_models.dart';
 import 'stream_service.dart';
+import '../utils/error_logger.dart';
 
 /// 聊天服务类
 /// 管理聊天相关状态和操作
@@ -38,6 +39,10 @@ class ChatService with ChangeNotifier {
   String? _currentTaskId;
   String _currentAnswer = '';
   bool _isInitialized = false;
+  
+  // 新增：流订阅管理
+  StreamSubscription<dynamic>? _currentStreamSubscription;
+  bool _isStreamCancelled = false;
   
   // Getters
   List<AIModule> get aiModules => _aiModules;
@@ -116,6 +121,13 @@ class ChatService with ChangeNotifier {
         }
       }
     } catch (e) {
+      // 记录获取用户ID错误
+      await logChatError(
+        message: '获取用户ID失败: $e',
+        serviceName: 'ChatService',
+        stackTrace: e.toString(),
+      );
+      
       // 出错时使用临时ID
       _userId = const Uuid().v4();
       debugPrint('===> 获取用户ID出错: $e，使用临时ID: $_userId');
@@ -131,6 +143,14 @@ class ChatService with ChangeNotifier {
       // 不再使用SharedPreferences中缓存的模块列表
       await _loadAIModulesFromBackend();
     } catch (e) {
+      // 记录加载AI模块错误
+      await logChatError(
+        message: '加载AI模块失败: $e',
+        userId: _userId,
+        serviceName: 'ChatService',
+        stackTrace: e.toString(),
+      );
+      
       debugPrint('===> 加载AI模块时出错: $e');
     } finally {
       _setLoading(false);
@@ -189,6 +209,14 @@ class ChatService with ChangeNotifier {
         debugPrint('===> 从后端加载AI模块失败: ${response.data['message']}');
       }
     } catch (e) {
+      // 记录从后端加载AI模块错误
+      await logChatError(
+        message: '从后端加载AI模块失败: $e',
+        userId: _userId,
+        serviceName: 'ChatService',
+        stackTrace: e.toString(),
+      );
+      
       debugPrint('===> 从后端加载AI模块时出错: $e');
     }
   }
@@ -231,6 +259,12 @@ class ChatService with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
+      await logChatError(
+        message: '加载模块参数失败: $e',
+        userId: _userId,
+        serviceName: 'ChatService',
+        stackTrace: e.toString(),
+      );
       print('加载模块参数失败: $e');
     }
   }
@@ -257,6 +291,12 @@ class ChatService with ChangeNotifier {
       
       notifyListeners();
     } catch (e) {
+      await logChatError(
+        message: '选择AI模块失败: $e',
+        userId: _userId,
+        serviceName: 'ChatService',
+        stackTrace: e.toString(),
+      );
       debugPrint('Error selecting AI module: $e');
     } finally {
       _setLoading(false);
@@ -276,6 +316,12 @@ class ChatService with ChangeNotifier {
       debugPrint('===> 加载到${_conversations.length}个会话');
       notifyListeners();
     } catch (e) {
+      await logChatError(
+        message: '加载会话列表失败: $e',
+        userId: _userId,
+        serviceName: 'ChatService',
+        stackTrace: e.toString(),
+      );
       debugPrint('Error loading conversations: $e');
     } finally {
       _setLoading(false);
@@ -310,6 +356,12 @@ class ChatService with ChangeNotifier {
       await loadMessages();
       notifyListeners();
     } catch (e) {
+      await logChatError(
+        message: '加载会话失败: $e',
+        userId: _userId,
+        serviceName: 'ChatService',
+        stackTrace: e.toString(),
+      );
       debugPrint('Error loading conversation: $e');
     } finally {
       _setLoading(false);
@@ -358,6 +410,12 @@ class ChatService with ChangeNotifier {
       
       notifyListeners();
     } catch (e) {
+      await logChatError(
+        message: '加载消息历史失败: $e',
+        userId: _userId,
+        serviceName: 'ChatService',
+        stackTrace: e.toString(),
+      );
       debugPrint('Error loading messages: $e');
     } finally {
       _setLoading(false);
@@ -373,12 +431,23 @@ class ChatService with ChangeNotifier {
       );
       notifyListeners();
     } catch (e) {
+      await logChatError(
+        message: '加载建议问题失败: $e',
+        userId: _userId,
+        serviceName: 'ChatService',
+        stackTrace: e.toString(),
+      );
       debugPrint('Error loading suggested questions: $e');
     }
   }
   
   /// 发送消息（使用流式响应）
   Future<void> sendMessageStream(String message) async {
+    return sendMessageStreamWithInputs(message, inputs: {});
+  }
+  
+  /// 发送消息（使用流式响应，支持自定义inputs）
+  Future<void> sendMessageStreamWithInputs(String message, {Map<String, dynamic>? inputs}) async {
     if (_userId.isEmpty) {
       await _initUserId();
     }
@@ -395,6 +464,7 @@ class ChatService with ChangeNotifier {
     try {
       _isSending = true;
       _currentAnswer = ''; // 清空之前的累积回复
+      _isStreamCancelled = false; // 重置取消标志
       notifyListeners();
 
       // 创建临时ID以更好地标识消息
@@ -422,7 +492,7 @@ class ChatService with ChangeNotifier {
 
       // 创建聊天请求 - 对于新对话，不传conversationId
       final requestBody = {
-        'inputs': {},
+        'inputs': inputs ?? {},
         'query': message,
         'response_mode': 'streaming',
         'user': _userId,
@@ -433,11 +503,17 @@ class ChatService with ChangeNotifier {
       debugPrint('===> 聊天API KEY: ${selectedModule!.apiKey.substring(0, 5)}...');
 
       // 使用StreamService发送流式请求
-      final streamSubscription = _streamService.createSSERequest(
+      _currentStreamSubscription = _streamService.createSSERequest(
         endpoint: 'chat-messages',
         apiKey: selectedModule!.apiKey,
         body: requestBody,
         onMessage: (response) {
+          // 检查是否已被取消
+          if (_isStreamCancelled) {
+            debugPrint('===> 流已被取消，忽略消息响应');
+            return;
+          }
+          
           if (response is MessageResponse) {
             // 更新任务ID
             _currentTaskId = response.taskId;
@@ -472,6 +548,12 @@ class ChatService with ChangeNotifier {
           }
         },
         onMessageEnd: (response) {
+          // 检查是否已被取消
+          if (_isStreamCancelled) {
+            debugPrint('===> 流已被取消，忽略消息结束响应');
+            return;
+          }
+          
           debugPrint('===> 消息结束: ${response.messageId}');
           
           // 更新最终消息
@@ -510,6 +592,12 @@ class ChatService with ChangeNotifier {
           }
         },
         onError: (errorResponse) {
+          // 检查是否已被取消
+          if (_isStreamCancelled) {
+            debugPrint('===> 流已被取消，忽略错误响应');
+            return;
+          }
+          
           debugPrint('===> 流错误: ${errorResponse.message}');
           
           // 更新临时消息为错误信息
@@ -528,27 +616,45 @@ class ChatService with ChangeNotifier {
         // 流事件已在各个回调中处理
       });
 
-      // 等待流处理完成
-      await streamSubscription.asFuture();
-      await streamSubscription.cancel();
-
+      // 等待流处理完成或被取消
+      await _currentStreamSubscription!.asFuture().catchError((error) {
+        if (!_isStreamCancelled) {
+          debugPrint('流处理出错: $error');
+          return Future.error(error);
+        }
+        return Future.value();
+      });
+      
     } catch (e) {
       debugPrint('发送消息错误: $e');
+      await logChatError(
+        message: '发送消息错误: $e',
+        userId: _userId,
+        serviceName: 'ChatService',
+        stackTrace: e.toString(),
+      );
       
-      // 确保在错误情况下也更新UI
-      final index = _messages.indexWhere((msg) => msg.id.startsWith('temp_ai_'));
-      if (index != -1) {
-        _messages[index] = ChatMessage(
-          id: _messages[index].id,
-          conversationId: _messages[index].conversationId,
-          answer: '发送消息时出错: $e',
-          createdAt: _messages[index].createdAt,
-        );
-        notifyListeners();
+      // 确保在错误情况下也更新UI（如果没有被取消）
+      if (!_isStreamCancelled) {
+        final index = _messages.indexWhere((msg) => msg.id.startsWith('temp_ai_'));
+        if (index != -1) {
+          _messages[index] = ChatMessage(
+            id: _messages[index].id,
+            conversationId: _messages[index].conversationId,
+            answer: '发送消息时出错: $e',
+            createdAt: _messages[index].createdAt,
+          );
+          notifyListeners();
+        }
       }
       
-      rethrow;
+      // 如果没有被取消，重新抛出异常
+      if (!_isStreamCancelled) {
+        throw e;
+      }
     } finally {
+      // 清理订阅引用
+      _currentStreamSubscription = null;
       _isSending = false;
       notifyListeners();
     }
@@ -580,25 +686,64 @@ class ChatService with ChangeNotifier {
   
   /// 停止响应
   Future<void> stopResponse() async {
-    if (_currentTaskId == null || selectedModule == null) return;
-
-    try {
-      final result = await _streamService.stopResponse(
-        taskId: _currentTaskId!,
-        userId: _userId,
-        apiKey: selectedModule!.apiKey,
-      );
-      
-      if (result) {
-        debugPrint('===> 停止响应成功');
-      } else {
-        debugPrint('===> 停止响应失败');
+    debugPrint('===> 停止响应被调用');
+    
+    // 1. 立即设置取消标志，阻止后续响应处理
+    _isStreamCancelled = true;
+    
+    // 2. 取消当前流订阅（如果存在）
+    if (_currentStreamSubscription != null) {
+      try {
+        await _currentStreamSubscription!.cancel();
+        debugPrint('===> 流订阅已取消');
+      } catch (e) {
+        await logChatError(
+          message: '取消流订阅时出错: $e',
+          userId: _userId,
+          serviceName: 'ChatService',
+          stackTrace: e.toString(),
+        );
+        debugPrint('===> 取消流订阅时出错: $e');
+      } finally {
+        _currentStreamSubscription = null;
       }
-      
-      _currentTaskId = null;
-    } catch (e) {
-      debugPrint('停止响应出错: $e');
     }
+    
+    // 3. 如果有taskId，发送停止API请求并等待响应
+    if (_currentTaskId != null && selectedModule != null) {
+      try {
+        debugPrint('===> 正在发送停止API请求...');
+        final result = await _streamService.stopResponse(
+          taskId: _currentTaskId!,
+          userId: _userId,
+          apiKey: selectedModule!.apiKey,
+        );
+        
+        if (result) {
+          debugPrint('===> 停止API请求成功');
+        } else {
+          debugPrint('===> 停止API请求失败');
+        }
+        
+        _currentTaskId = null;
+      } catch (e) {
+        await logChatError(
+          message: '停止API请求出错: $e',
+          userId: _userId,
+          serviceName: 'ChatService',
+          stackTrace: e.toString(),
+        );
+        debugPrint('===> 停止API请求出错: $e');
+        // 即使API请求失败，也要清除taskId，避免状态不一致
+        _currentTaskId = null;
+      }
+    }
+    
+    // 4. 重置发送状态，允许用户重新发送消息
+    _isSending = false;
+    notifyListeners();
+    
+    debugPrint('===> 停止响应完成');
   }
   
   /// 消息反馈（点赞/点踩）
@@ -628,6 +773,12 @@ class ChatService with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
+      await logChatError(
+        message: '发送反馈失败: $e',
+        userId: _userId,
+        serviceName: 'ChatService',
+        stackTrace: e.toString(),
+      );
       debugPrint('Error sending feedback: $e');
     }
   }
@@ -651,6 +802,12 @@ class ChatService with ChangeNotifier {
       
       notifyListeners();
     } catch (e) {
+      await logChatError(
+        message: '删除会话失败: $e',
+        userId: _userId,
+        serviceName: 'ChatService',
+        stackTrace: e.toString(),
+      );
       debugPrint('Error deleting conversation: $e');
     }
   }
@@ -678,6 +835,12 @@ class ChatService with ChangeNotifier {
       
       notifyListeners();
     } catch (e) {
+      await logChatError(
+        message: '重命名会话失败: $e',
+        userId: _userId,
+        serviceName: 'ChatService',
+        stackTrace: e.toString(),
+      );
       debugPrint('Error renaming conversation: $e');
     }
   }
@@ -742,7 +905,7 @@ class ChatService with ChangeNotifier {
   // 获取AI模块的参数
   Future<AppParameters?> getAIModuleParameters(String apiKey) async {
     try {
-      final difyBaseUrl = dotenv.env['DIFY_API_BASE_URL'] ?? 'http://47.238.246.199/v1';
+      final difyBaseUrl = dotenv.env['DIFY_API_BASE_URL'] ?? 'http://skysail.top/v1';
       final response = await http.get(
         Uri.parse('$difyBaseUrl/parameters'),
         headers: {
@@ -764,11 +927,35 @@ class ChatService with ChangeNotifier {
     }
   }
 
-  // 获取当前模块的推荐问题列表
+  // 获取当前模块的参考问题列表
   List<String> get moduleQuestions {
     if (selectedModule?.parameters?.suggestedQuestions != null) {
       return selectedModule!.parameters!.suggestedQuestions!;
     }
     return [];
+  }
+
+  /// 处理目标建议接受
+  Future<void> _handleGoalSuggestionAccept(Map<String, dynamic> suggestionData) async {
+    // TODO: 实现目标建议接受逻辑
+    debugPrint('接受目标建议: $suggestionData');
+  }
+
+  /// 处理目标建议拒绝
+  void _handleGoalSuggestionReject(Map<String, dynamic> suggestionData) {
+    // TODO: 实现目标建议拒绝逻辑
+    debugPrint('拒绝目标建议: $suggestionData');
+  }
+  
+  /// 清理资源
+  @override
+  void dispose() {
+    // 取消当前流订阅
+    if (_currentStreamSubscription != null) {
+      _currentStreamSubscription!.cancel();
+      _currentStreamSubscription = null;
+    }
+    
+    super.dispose();
   }
 } 

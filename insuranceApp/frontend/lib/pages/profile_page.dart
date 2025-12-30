@@ -4,7 +4,13 @@ import 'package:provider/provider.dart';
 import '../models/user_info.dart';
 import '../services/user_info_service.dart';
 import '../services/auth_service.dart';
+import '../services/developer_service.dart';
+import '../widgets/developer_password_dialog.dart';
 import 'profile_edit_page.dart';
+import 'privacy_policy_page.dart';
+import 'disclaimer_page.dart';
+import 'help_page.dart';
+import 'developer_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -262,13 +268,185 @@ class _ProfilePageState extends State<ProfilePage> {
             subtitle: const Text('获取帮助或提供反馈'),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('帮助功能敬请期待')),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const HelpPage(),
+                ),
               );
             },
           ),
         ),
+        const SizedBox(height: 12),
+        _buildDeveloperCard(context),
+        const SizedBox(height: 24), // 增加间距，将法律文档与其他按钮隔开
+        _buildDisclaimerCard(context), // 免责声明卡片
+        const SizedBox(height: 12),
+        _buildPrivacyPolicyCard(context), // 隐私政策卡片
       ],
+    );
+  }
+
+  Widget _buildDeveloperCard(BuildContext context) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        leading: Icon(
+          Icons.developer_mode,
+          color: Theme.of(context).primaryColor,
+        ),
+        title: const Text('开发者选项'),
+        subtitle: const Text('访问开发者功能和设置'),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        onTap: () => _showDeveloperPasswordDialog(context),
+      ),
+    );
+  }
+
+  Widget _buildDisclaimerCard(BuildContext context) {
+    return Card(
+      elevation: 3, // 稍微增加阴影以突出重要性
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Colors.orange.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(20), // 增加内边距使按钮更大
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const DisclaimerPage(),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.gavel_outlined,
+                  color: Colors.orange[700],
+                  size: 28, // 增大图标尺寸
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '免责声明',
+                      style: TextStyle(
+                        fontSize: 18, // 增大字体
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange[700],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '了解平台使用条款和责任限制',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 18,
+                color: Colors.orange[700],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrivacyPolicyCard(BuildContext context) {
+    return Card(
+      elevation: 3, // 稍微增加阴影以突出重要性
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Colors.red.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(20), // 增加内边距使按钮更大
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const PrivacyPolicyPage(),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.privacy_tip_outlined,
+                  color: Colors.red[700],
+                  size: 28, // 增大图标尺寸
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '隐私政策',
+                      style: TextStyle(
+                        fontSize: 18, // 增大字体
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red[700],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '了解我们如何保护您的隐私',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 18,
+                color: Colors.red[700],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -285,6 +463,51 @@ class _ProfilePageState extends State<ProfilePage> {
     });
   }
 
+  /// 显示开发者密码输入对话框
+  Future<void> _showDeveloperPasswordDialog(BuildContext context) async {
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const DeveloperPasswordDialog(),
+    );
+
+    // 如果用户点击了取消或者对话框被关闭，result会是null
+    if (result == null) {
+      return; // 用户取消了操作，直接返回
+    }
+
+    // 如果用户输入了密码，进行验证
+    if (result.isNotEmpty) {
+      // 获取开发者服务
+      final developerService = Provider.of<DeveloperService>(context, listen: false);
+      
+      // 验证密码
+      final isValid = await developerService.verifyPassword(result);
+      
+      if (isValid) {
+        // 密码正确，跳转到开发者页面
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const DeveloperPage(),
+            ),
+          );
+        }
+      } else {
+        // 密码错误，显示错误提示
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('密码错误，请重试'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -298,10 +521,20 @@ class _ProfilePageState extends State<ProfilePage> {
               child: const Text('取消'),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
+              onPressed: () async {
+                Navigator.of(context).pop(); // 关闭对话框
+                
+                // 执行退出登录
                 final authService = Provider.of<AuthService>(context, listen: false);
-                authService.logout();
+                await authService.logout();
+                
+                // 手动清理导航栈并跳转到登录页面
+                if (mounted) {
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    '/',
+                    (route) => false, // 清除所有路由
+                  );
+                }
               },
               child: const Text('确定'),
             ),

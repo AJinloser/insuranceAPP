@@ -7,7 +7,7 @@ services:
       - "8000:8000"
     volumes:
       - ./app:/app/app
-      - ./sql:/app/sql
+      - ./datas:/app/datas
       - ./.env:/app/.env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/insurance_app
@@ -24,7 +24,6 @@ services:
     image: postgres:15
     volumes:
       - postgres_data:/var/lib/postgresql/data/
-      - ./sql:/docker-entrypoint-initdb.d/sql/
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
