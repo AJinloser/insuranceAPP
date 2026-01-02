@@ -11,6 +11,7 @@ class ConversationFilter extends StatefulWidget {
   final Function({
     List<String>? selectedUserIds,
     List<String>? selectedAppKeys,
+    List<String>? selectedExperimentIds,
     DateTime? startTime,
     DateTime? endTime,
     String? keyword,
@@ -30,6 +31,7 @@ class ConversationFilter extends StatefulWidget {
 class _ConversationFilterState extends State<ConversationFilter> {
   List<String> _selectedUserIds = []; // 改为多选
   List<String> _selectedAppKeys = []; // 改为多选
+  List<String> _selectedExperimentIds = []; // 实验ID多选
   DateTime? _startTime;
   DateTime? _endTime;
   final TextEditingController _keywordController = TextEditingController();
@@ -140,6 +142,10 @@ class _ConversationFilterState extends State<ConversationFilter> {
             ),
             const SizedBox(height: 16),
             
+            // 新增：实验ID筛选
+            _buildExperimentIdDropdown(),
+            const SizedBox(height: 16),
+            
             // 第二行：时间范围
             Row(
               children: [
@@ -187,32 +193,17 @@ class _ConversationFilterState extends State<ConversationFilter> {
             const SizedBox(height: 16),
             
             // 操作按钮
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _clearFilters,
-                    icon: const Icon(Icons.clear),
-                    label: const Text('清空筛选'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey[300],
-                      foregroundColor: Colors.black87,
-                    ),
-                  ),
+            Center(
+              child: ElevatedButton.icon(
+                onPressed: _clearFilters,
+                icon: const Icon(Icons.clear),
+                label: const Text('清空筛选'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[300],
+                  foregroundColor: Colors.black87,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _applyFilters,
-                    icon: const Icon(Icons.search),
-                    label: const Text('开始分析'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         ),
@@ -474,8 +465,23 @@ class _ConversationFilterState extends State<ConversationFilter> {
                         setDialogState(() {
                           if (value == true) {
                             _selectedUserIds.add(user.userId);
+                            // 自动选择对应的实验ID
+                            if (user.experimentId != null && 
+                                !_selectedExperimentIds.contains(user.experimentId!)) {
+                              _selectedExperimentIds.add(user.experimentId!);
+                            }
                           } else {
                             _selectedUserIds.remove(user.userId);
+                            // 自动取消选择对应的实验ID（如果没有其他用户使用该实验ID）
+                            if (user.experimentId != null) {
+                              final hasOtherUsersWithSameExpId = _selectedUserIds.any((uid) {
+                                final u = widget.users.firstWhere((u) => u.userId == uid);
+                                return u.experimentId == user.experimentId;
+                              });
+                              if (!hasOtherUsersWithSameExpId) {
+                                _selectedExperimentIds.remove(user.experimentId!);
+                              }
+                            }
                           }
                         });
                       },
@@ -488,6 +494,8 @@ class _ConversationFilterState extends State<ConversationFilter> {
                   onPressed: () {
                     setDialogState(() {
                       _selectedUserIds.clear();
+                      // 同时清空对应的实验ID
+                      _selectedExperimentIds.clear();
                     });
                   },
                   child: const Text('清空'),
@@ -496,6 +504,12 @@ class _ConversationFilterState extends State<ConversationFilter> {
                   onPressed: () {
                     setDialogState(() {
                       _selectedUserIds = widget.users.map((u) => u.userId).toList();
+                      // 同时选择所有对应的实验ID
+                      _selectedExperimentIds = widget.users
+                          .where((u) => u.experimentId != null)
+                          .map((u) => u.experimentId!)
+                          .toSet()
+                          .toList();
                     });
                   },
                   child: const Text('全选'),
@@ -584,6 +598,132 @@ class _ConversationFilterState extends State<ConversationFilter> {
     );
   }
 
+  Widget _buildExperimentIdDropdown() {
+    // 获取所有唯一的实验ID
+    final experimentIds = widget.users
+        .where((user) => user.experimentId != null && user.experimentId!.isNotEmpty)
+        .map((user) => user.experimentId!)
+        .toSet()
+        .toList()
+      ..sort();
+
+    if (experimentIds.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return InputDecorator(
+      decoration: const InputDecoration(
+        labelText: '实验ID',
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+      child: InkWell(
+        onTap: () => _showExperimentIdMultiSelect(experimentIds),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                _selectedExperimentIds.isEmpty
+                    ? '全部'
+                    : _selectedExperimentIds.length == 1
+                        ? _selectedExperimentIds.first
+                        : '${_selectedExperimentIds.length}个实验ID',
+                style: TextStyle(
+                  color: _selectedExperimentIds.isEmpty
+                      ? Colors.grey[600]
+                      : Colors.black87,
+                ),
+              ),
+            ),
+            const Icon(Icons.arrow_drop_down),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showExperimentIdMultiSelect(List<String> experimentIds) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('选择实验ID'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: ListView(
+                  shrinkWrap: true,
+                  children: experimentIds.map((id) {
+                    return CheckboxListTile(
+                      title: Text(id),
+                      value: _selectedExperimentIds.contains(id),
+                      onChanged: (selected) {
+                        setDialogState(() {
+                          if (selected == true) {
+                            _selectedExperimentIds.add(id);
+                            // 自动选择所有拥有该实验ID的用户
+                            for (final user in widget.users) {
+                              if (user.experimentId == id && 
+                                  !_selectedUserIds.contains(user.userId)) {
+                                _selectedUserIds.add(user.userId);
+                              }
+                            }
+                          } else {
+                            _selectedExperimentIds.remove(id);
+                            // 自动取消选择所有拥有该实验ID的用户
+                            final usersToRemove = widget.users
+                                .where((u) => u.experimentId == id)
+                                .map((u) => u.userId)
+                                .toList();
+                            for (final userId in usersToRemove) {
+                              _selectedUserIds.remove(userId);
+                            }
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    setDialogState(() {
+                      _selectedExperimentIds.clear();
+                      // 同时清空对应的用户
+                      _selectedUserIds.clear();
+                    });
+                  },
+                  child: const Text('清空'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setDialogState(() {
+                      _selectedExperimentIds = List.from(experimentIds);
+                      // 同时选择所有对应的用户
+                      _selectedUserIds = widget.users.map((u) => u.userId).toList();
+                    });
+                  },
+                  child: const Text('全选'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    setState(() {});
+                    _notifyFilterChanged();
+                  },
+                  child: const Text('确定'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _notifyFilterChanged() {
     final keyword = _keywordController.text.trim().isEmpty ? null : _keywordController.text.trim();
     final feedback = _selectedFeedback == '全部' ? null : _selectedFeedback;
@@ -591,6 +731,7 @@ class _ConversationFilterState extends State<ConversationFilter> {
     widget.onFilterChanged(
       selectedUserIds: _selectedUserIds.isEmpty ? null : _selectedUserIds,
       selectedAppKeys: _selectedAppKeys.isEmpty ? null : _selectedAppKeys,
+      selectedExperimentIds: _selectedExperimentIds.isEmpty ? null : _selectedExperimentIds,
       startTime: _startTime,
       endTime: _endTime,
       keyword: keyword,
@@ -602,6 +743,7 @@ class _ConversationFilterState extends State<ConversationFilter> {
     setState(() {
       _selectedUserIds.clear();
       _selectedAppKeys.clear();
+      _selectedExperimentIds.clear();
       _startTime = null;
       _endTime = null;
       _keywordController.clear();
@@ -610,7 +752,4 @@ class _ConversationFilterState extends State<ConversationFilter> {
     _notifyFilterChanged();
   }
 
-  void _applyFilters() {
-    _notifyFilterChanged();
-  }
 }

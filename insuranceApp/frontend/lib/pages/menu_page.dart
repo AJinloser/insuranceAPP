@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 import '../models/dify_models.dart';
 import '../services/chat_service.dart';
 import '../services/settings_service.dart';
+import '../services/experiment_service.dart';
 import '../widgets/ai_module_card.dart';
 import '../widgets/conversation_item.dart';
+import 'conversation_page.dart';
 
 /// 菜单页面
 /// 包含AI模块选择、会话列表和设置选项，右上角有返回按钮
@@ -23,6 +25,8 @@ class _MenuPageState extends State<MenuPage> {
   bool _isLoading = true;
   // 是否已加载会话列表
   bool _hasLoadedConversations = false;
+  // 是否为实验模式
+  bool _isExperimentMode = false;
   
   // 主题色定义，与登录页面统一
   final Color _primaryColor = const Color(0xFF6A1B9A); // 紫色主题
@@ -36,7 +40,23 @@ class _MenuPageState extends State<MenuPage> {
     // 初始化聊天服务和设置服务
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initServices();
+      _checkExperimentMode();
     });
+  }
+  
+  @override
+  void dispose() {
+    super.dispose();
+  }
+  
+  // 检查是否为实验模式
+  void _checkExperimentMode() {
+    final experimentService = Provider.of<ExperimentService>(context, listen: false);
+    if (experimentService.experimentInfo != null) {
+      setState(() {
+        _isExperimentMode = true;
+      });
+    }
   }
   
   // 初始化服务
@@ -102,12 +122,24 @@ class _MenuPageState extends State<MenuPage> {
   
   // 选择会话
   void _selectConversation(String conversationId) {
-    // 跳转到首页（第一个标签是对话页面）
-    Navigator.pushReplacementNamed(
-      context, 
-      '/home',
-      arguments: {'conversationId': conversationId}
-    );
+    // 实验模式：直接跳转到实验对话页面，避免显示底部导航栏
+    if (_isExperimentMode) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => ConversationPage(
+            conversationId: conversationId,
+            isExperimentMode: true,
+          ),
+        ),
+      );
+    } else {
+      // 非实验模式：跳转到首页（第一个标签是对话页面）
+      Navigator.pushReplacementNamed(
+        context, 
+        '/home',
+        arguments: {'conversationId': conversationId}
+      );
+    }
   }
   
   // 选择AI模块
@@ -150,8 +182,13 @@ class _MenuPageState extends State<MenuPage> {
           IconButton(
             icon: const Icon(Icons.arrow_forward, size: 22),
             onPressed: () {
-              // 返回首页
-              Navigator.pushReplacementNamed(context, '/home');
+              if (_isExperimentMode) {
+                // 实验模式：返回对话页面，继续之前的对话
+                Navigator.of(context).pop();
+              } else {
+                // 非实验模式：返回首页
+                Navigator.pushReplacementNamed(context, '/home');
+              }
             },
           ),
         ],
@@ -176,12 +213,14 @@ class _MenuPageState extends State<MenuPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // AI模块选择区域
-              _buildSectionTitle('AI 助手', Icons.smart_toy_outlined),
-              SizedBox(height: verticalPadding * 0.4),
-              _buildAIModulesSection(chatService),
-              
-              SizedBox(height: verticalPadding * 1.0),
+              // 实验模式下隐藏AI模块选择
+              if (!_isExperimentMode) ...[
+                // AI模块选择区域
+                _buildSectionTitle('AI 助手', Icons.smart_toy_outlined),
+                SizedBox(height: verticalPadding * 0.4),
+                _buildAIModulesSection(chatService),
+                SizedBox(height: verticalPadding * 1.0),
+              ],
               
               // 历史会话区域
               _buildSectionTitle('历史对话', Icons.history_outlined),
@@ -193,10 +232,12 @@ class _MenuPageState extends State<MenuPage> {
               
               SizedBox(height: verticalPadding * 1.0),
               
-              // 设置区域
-              _buildSectionTitle('设置', Icons.settings_outlined),
-              SizedBox(height: verticalPadding * 0.4),
-              _buildSettingsSection(),
+              // 设置区域（实验模式下隐藏）
+              if (!_isExperimentMode) ...[
+                _buildSectionTitle('设置', Icons.settings_outlined),
+                SizedBox(height: verticalPadding * 0.4),
+                _buildSettingsSection(),
+              ],
               
               SizedBox(height: verticalPadding),
             ],
@@ -327,7 +368,6 @@ class _MenuPageState extends State<MenuPage> {
     );
   }
   
-  // 构建设置区域
   Widget _buildSettingsSection() {
     return Consumer<SettingsService>(
       builder: (context, settingsService, child) {

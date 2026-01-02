@@ -550,16 +550,22 @@ class DeveloperService with ChangeNotifier {
 class AdminUserInfo {
   final String userId;
   final String account;
+  final String? experimentId;
+  final String? groupCode;
 
   AdminUserInfo({
     required this.userId,
     required this.account,
+    this.experimentId,
+    this.groupCode,
   });
 
   factory AdminUserInfo.fromJson(Map<String, dynamic> json) {
     return AdminUserInfo(
       userId: json['user_id'] ?? '',
       account: json['account'] ?? '',
+      experimentId: json['experiment_id'],
+      groupCode: json['group_code'],
     );
   }
 }

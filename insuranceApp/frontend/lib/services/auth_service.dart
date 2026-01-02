@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 // import '../models/user.dart';
 import 'api_service.dart';
 import 'chat_service.dart';
-import '../utils/error_logger.dart';
 
 enum AuthStatus {
   unknown,
@@ -34,22 +33,14 @@ class AuthService with ChangeNotifier {
 
   // 初始化
   Future<void> init() async {
-    final prefs = await SharedPreferences.getInstance();
-    _isPersistent = prefs.getBool('isPersistent') ?? false;
+    // 实验模式：禁用自动登录，始终要求用户手动登录
+    // 这确保每个用户都经过完整的实验流程：注册 → 测前问卷 → 声明 → 对话 → 测后问卷
+    _authStatus = AuthStatus.unauthenticated;
     
-    if (_isPersistent) {
-      final token = await _apiService.getToken();
-      final userId = await _apiService.getUserId();
-      
-      if (token != null && userId != null) {
-        _userId = userId;
-        _authStatus = AuthStatus.authenticated;
-      } else {
-        _authStatus = AuthStatus.unauthenticated;
-      }
-    } else {
-      _authStatus = AuthStatus.unauthenticated;
-    }
+    // 清除可能存在的持久化设置
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('isPersistent');
+    _isPersistent = false;
     
     notifyListeners();
   }
@@ -79,14 +70,6 @@ class AuthService with ChangeNotifier {
       
       return true;
     } catch (e) {
-      // 记录登录错误
-      await logAuthError(
-        message: '用户登录失败: $e',
-        userId: account,
-        serviceName: 'AuthService',
-        stackTrace: e.toString(),
-      );
-      
       _authStatus = AuthStatus.unauthenticated;
       _isNewUser = false;
       _shouldShowProfile = false;
@@ -113,14 +96,6 @@ class AuthService with ChangeNotifier {
       
       return true;
     } catch (e) {
-      // 记录注册错误
-      await logAuthError(
-        message: '用户注册失败: $e',
-        userId: account,
-        serviceName: 'AuthService',
-        stackTrace: e.toString(),
-      );
-      
       _authStatus = AuthStatus.unauthenticated;
       _isNewUser = false;
       _shouldShowProfile = false;

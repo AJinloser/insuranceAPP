@@ -4,7 +4,6 @@ import traceback
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.logging_config import log_error
 from app.db.base import get_db
 from app.models.user import User
 from app.schemas.admin import UserListResponse, UserInfo
@@ -26,7 +25,9 @@ def get_all_users(
         for user in users:
             user_info = UserInfo(
                 user_id=str(user.user_id),
-                account=user.account
+                account=user.account,
+                experiment_id=user.experiment_id,
+                group_code=user.group_code
             )
             user_list.append(user_info)
         
@@ -37,12 +38,6 @@ def get_all_users(
         )
         
     except Exception as e:
-        log_error(
-            message=f"获取用户列表失败: {str(e)}",
-            error_type="ADMIN_ERROR",
-            api_endpoint="/api/v1/admin/users",
-            stack_trace=traceback.format_exc()
-        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="获取用户列表失败"

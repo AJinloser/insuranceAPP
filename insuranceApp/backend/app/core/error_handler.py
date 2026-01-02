@@ -10,7 +10,6 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 from pydantic import ValidationError
 
-from .logging_config import log_error
 
 
 def get_user_id_from_request(request: Request) -> Optional[str]:
@@ -50,14 +49,6 @@ async def global_exception_handler(request: Request, exc: Exception):
     # 根据异常类型处理
     if isinstance(exc, HTTPException):
         # HTTP异常
-        log_error(
-            message=f"HTTP {exc.status_code}: {exc.detail}",
-            error_type=error_type,
-            user_id=user_id,
-            api_endpoint=endpoint,
-            status_code=exc.status_code
-        )
-        
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.detail}
@@ -65,14 +56,6 @@ async def global_exception_handler(request: Request, exc: Exception):
     
     elif isinstance(exc, ValidationError):
         # 验证错误
-        log_error(
-            message=f"数据验证错误: {str(exc)}",
-            error_type="VALIDATION_ERROR",
-            user_id=user_id,
-            api_endpoint=endpoint,
-            stack_trace=stack_trace
-        )
-        
         return JSONResponse(
             status_code=422,
             content={"detail": "数据验证失败", "errors": exc.errors()}
@@ -80,14 +63,6 @@ async def global_exception_handler(request: Request, exc: Exception):
     
     elif isinstance(exc, SQLAlchemyError):
         # 数据库错误
-        log_error(
-            message=f"数据库错误: {str(exc)}",
-            error_type="DATABASE_ERROR",
-            user_id=user_id,
-            api_endpoint=endpoint,
-            stack_trace=stack_trace
-        )
-        
         return JSONResponse(
             status_code=500,
             content={"detail": "数据库操作失败"}
@@ -95,15 +70,6 @@ async def global_exception_handler(request: Request, exc: Exception):
     
     else:
         # 其他未处理的异常
-        log_error(
-            message=f"未处理的异常: {str(exc)}",
-            error_type=error_type,
-            user_id=user_id,
-            api_endpoint=endpoint,
-            stack_trace=stack_trace,
-            exception_type=type(exc).__name__
-        )
-        
         return JSONResponse(
             status_code=500,
             content={"detail": "服务器内部错误"}

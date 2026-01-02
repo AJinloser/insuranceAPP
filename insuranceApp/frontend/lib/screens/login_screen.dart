@@ -3,9 +3,11 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
 
 import '../services/auth_service.dart';
+import '../services/developer_service.dart';
 import '../utils/validators.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
+import '../pages/developer_page.dart';
 
 enum LoginMode { login, register, resetPassword }
 
@@ -21,9 +23,11 @@ class _LoginScreenState extends State<LoginScreen> {
   final _accountController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _developerPasswordController = TextEditingController();
 
   bool _isLoading = false;
-  bool _isPersistent = false;
+  // 实验模式：移除自动登录选项
+  // bool _isPersistent = false;  // 已禁用
   bool _isPasswordVisible = false;
   bool _hasError = false;
   LoginMode _mode = LoginMode.login;
@@ -38,6 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
     _accountController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _developerPasswordController.dispose();
     super.dispose();
   }
 
@@ -71,9 +76,10 @@ class _LoginScreenState extends State<LoginScreen> {
               _accountController.text,
               _passwordController.text,
             );
-            if (success) {
-              await authService.setPersistent(_isPersistent);
-            }
+            // 实验模式：不再保存持久化登录状态
+            // if (success) {
+            //   await authService.setPersistent(_isPersistent);
+            // }
             break;
           case LoginMode.register:
             print('===> 执行注册操作');
@@ -227,40 +233,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
 
-                    // 记住密码选项（仅在登录模式下显示）
+                    // 实验模式：移除"记住密码"选项，只保留忘记密码链接
                     if (_mode == LoginMode.login)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8.0),
                         child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            Theme(
-                              data: Theme.of(context).copyWith(
-                                checkboxTheme: CheckboxThemeData(
-                                  fillColor: WidgetStateProperty.resolveWith<Color>(
-                                    (Set<WidgetState> states) {
-                                      if (states.contains(WidgetState.selected)) {
-                                        return _primaryColor;
-                                      }
-                                      return Colors.grey;
-                                    },
-                                  ),
-                                ),
-                              ),
-                              child: Checkbox(
-                                value: _isPersistent,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _isPersistent = value ?? false;
-                                  });
-                                },
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(3),
-                                ),
-                              ),
-                            ),
-                            const Text('记住密码',
-                                style: TextStyle(color: Colors.grey)),
-                            const Spacer(),
                             TextButton(
                               onPressed: () => _switchMode(LoginMode.resetPassword),
                               child: Text(
@@ -320,6 +299,25 @@ class _LoginScreenState extends State<LoginScreen> {
                       ],
                     ),
                     const SizedBox(height: 16.0),
+                    
+                    // 开发者入口（隐蔽）
+                    Center(
+                      child: TextButton(
+                        onPressed: _showDeveloperPasswordDialog,
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        ),
+                        child: Text(
+                          '开发者',
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8.0),
                   ],
                 ),
               ),
@@ -351,6 +349,77 @@ class _LoginScreenState extends State<LoginScreen> {
         return '注册';
       case LoginMode.resetPassword:
         return '重置密码';
+    }
+  }
+
+  // 显示开发者密码验证对话框
+  void _showDeveloperPasswordDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('开发者验证'),
+          content: TextField(
+            controller: _developerPasswordController,
+            obscureText: true,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: '请输入开发者密码',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.lock),
+            ),
+            onSubmitted: (_) => _verifyDeveloperPassword(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                _developerPasswordController.clear();
+                Navigator.of(context).pop();
+              },
+              child: const Text('取消'),
+            ),
+            ElevatedButton(
+              onPressed: _verifyDeveloperPassword,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _primaryColor,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('确定'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 验证开发者密码
+  void _verifyDeveloperPassword() async {
+    final developerService = Provider.of<DeveloperService>(
+      context,
+      listen: false,
+    );
+    
+    final isValid = await developerService.verifyPassword(
+      _developerPasswordController.text,
+    );
+    
+    if (isValid && mounted) {
+      _developerPasswordController.clear();
+      Navigator.of(context).pop(); // 关闭对话框
+      // 直接导航到开发者页面
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const DeveloperPage(),
+        ),
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('密码错误'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      _developerPasswordController.clear();
     }
   }
 } 

@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import '../models/dify_models.dart';
 import '../models/insurance_product.dart';
 import '../services/chat_service.dart';
+import '../services/auth_service.dart';
+import '../services/experiment_service.dart';
 import '../widgets/ai_welcome_view.dart';
 import '../widgets/chat_message_item.dart';
 import 'menu_page.dart';
@@ -19,6 +21,7 @@ class ConversationPage extends StatefulWidget {
   final VoidCallback? onNewConversation; // 新增回调
   final Function(String conversationId)? onConversationCreated; // 新增：会话创建回调
   final VoidCallback? onBack; // 新增：返回回调
+  final bool isExperimentMode; // 新增：是否为实验模式
 
   const ConversationPage({
     Key? key,
@@ -29,6 +32,7 @@ class ConversationPage extends StatefulWidget {
     this.onNewConversation,
     this.onConversationCreated,
     this.onBack,
+    this.isExperimentMode = false, // 默认不是实验模式
   }) : super(key: key);
 
   @override
@@ -97,11 +101,66 @@ class _ConversationPageState extends State<ConversationPage> {
     try {
       debugPrint('===> ConversationPage: 开始加载会话');
       
-      // 如果当前选中的模块没有parameters，先加载parameters
-      if (chatService.selectedModule != null && 
-          chatService.selectedModule!.parameters == null) {
-        debugPrint('===> ConversationPage: 加载模块参数');
-        await chatService.loadParametersForModule(chatService.selectedModule!);
+      // 实验模式：使用实验服务分配的API key
+      if (widget.isExperimentMode) {
+        debugPrint('===> ConversationPage: 实验模式，加载实验API key');
+        final experimentService = Provider.of<ExperimentService>(context, listen: false);
+        final authService = Provider.of<AuthService>(context, listen: false);
+        
+        if (authService.userId != null) {
+          // 获取实验信息
+          final expInfo = experimentService.experimentInfo ?? 
+              await experimentService.getExperimentInfo(authService.userId!);
+          
+          if (expInfo != null && expInfo.chatbotApiKey.isNotEmpty) {
+            debugPrint('===> ConversationPage: 使用实验API key: ${expInfo.chatbotApiKey}');
+            
+            // 从已加载的 AI 模块列表中查找匹配的模块
+            final experimentModule = chatService.aiModules.firstWhere(
+              (module) => module.apiKey == expInfo.chatbotApiKey,
+              orElse: () {
+                debugPrint('===> ConversationPage: 警告 - 未在模块列表中找到实验API key');
+                // 如果找不到，创建一个新的模块（不推荐，应该确保实验key在AI_MODULE_KEYS中）
+                return AIModule(apiKey: expInfo.chatbotApiKey);
+              },
+            );
+            
+            debugPrint('===> ConversationPage: 找到实验模块: ${experimentModule.appInfo?.name ?? "未命名"}');
+            
+            // 复用 default_chat_page 的逻辑：选择模块 -> 加载参数 -> 创建会话
+            await chatService.selectAIModule(experimentModule, shouldLoadConversations: false);
+            
+            if (experimentModule.parameters == null) {
+              debugPrint('===> ConversationPage: 加载模块参数');
+              await chatService.loadParametersForModule(experimentModule);
+            }
+            
+            debugPrint('===> ConversationPage: 创建新会话');
+            await chatService.createNewConversation();
+            debugPrint('===> ConversationPage: 实验模块设置完成');
+          } else {
+            debugPrint('===> ConversationPage: 警告 - 未获取到实验API key');
+          }
+        }
+      }
+      
+      // 非实验模式：正常加载参数
+      if (!widget.isExperimentMode) {
+        // 如果当前选中的模块没有parameters，先加载parameters
+        if (chatService.selectedModule != null && 
+            chatService.selectedModule!.parameters == null) {
+          debugPrint('===> ConversationPage: 加载模块参数');
+          try {
+            await chatService.loadParametersForModule(chatService.selectedModule!)
+                .timeout(const Duration(seconds: 10));
+            debugPrint('===> ConversationPage: 模块参数加载完成');
+          } catch (e) {
+            debugPrint('===> ConversationPage: 模块参数加载失败或超时: $e');
+            // 即使加载失败，也继续执行，让用户可以正常使用对话功能
+          }
+        } else {
+          debugPrint('===> ConversationPage: 模块参数已存在或模块为空，跳过加载');
+        }
       }
       
       // 只有在conversationId不为空时才查找已有会话
@@ -118,14 +177,6 @@ class _ConversationPageState extends State<ConversationPage> {
         await chatService.loadConversation(conversation);
       } else {
         debugPrint('===> ConversationPage: 新会话模式，等待用户发送消息');
-        // 对于新会话，不需要预先创建会话，让sendMessage方法处理
-        // 只需要确保已加载模块参数
-        if (chatService.selectedModule?.parameters == null) {
-          await chatService.loadParametersForModule(chatService.selectedModule!);
-        }
-        
-        // 对于新会话，ChatService会在发送第一条消息时自动处理会话创建
-        // 这里不需要手动设置建议问题，ChatService会处理
       }
       
       // 检查是否有现有消息，如果有则不显示欢迎视图
@@ -150,9 +201,11 @@ class _ConversationPageState extends State<ConversationPage> {
         SnackBar(content: Text('加载会话失败: $e')),
       );
     } finally {
+      debugPrint('===> ConversationPage: finally块执行，当前_isLoading=$_isLoading');
       setState(() {
         _isLoading = false;
       });
+      debugPrint('===> ConversationPage: setState完成，_isLoading现在=$_isLoading');
     }
   }
   
@@ -168,8 +221,15 @@ class _ConversationPageState extends State<ConversationPage> {
       await chatService.createNewConversation();
       
       if (mounted) {
+        // 实验模式：刷新当前页面状态，显示欢迎视图
+        if (widget.isExperimentMode) {
+          setState(() {
+            _showWelcomeView = true;
+            _isLoading = false;
+          });
+        } 
         // 如果有回调函数，使用回调重置到默认聊天页面（tab内导航）
-        if (widget.onNewConversation != null) {
+        else if (widget.onNewConversation != null) {
           widget.onNewConversation!();
         } else {
           // 否则使用原来的导航逻辑（独立页面导航）
@@ -185,9 +245,11 @@ class _ConversationPageState extends State<ConversationPage> {
         SnackBar(content: Text('创建会话失败: $e')),
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (!widget.isExperimentMode) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
   
@@ -306,6 +368,143 @@ class _ConversationPageState extends State<ConversationPage> {
     );
   }
   
+  // 结束实验对话
+  Future<void> _endExperimentConversation() async {
+    final experimentService = Provider.of<ExperimentService>(context, listen: false);
+    final authService = Provider.of<AuthService>(context, listen: false);
+    // 【实验模式】不再需要 chatService，因为数据控制选项仅用于声明，不执行实际删除
+    final info = experimentService.experimentInfo;
+    
+    // 检查是否展示数据控制选项
+    bool deletePersonalInfo = false;
+    bool deleteConversation = false;
+    
+    if (info?.showDataControl == true) {
+      // 显示确认对话框，包含数据控制选项
+      final result = await showDialog<Map<String, bool>>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          bool tempDeletePersonalInfo = false;
+          bool tempDeleteConversation = false;
+          
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              return AlertDialog(
+                title: const Text('结束对话'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('确定要结束对话吗？'),
+                    const SizedBox(height: 16),
+                    const Text(
+                      '您可以选择：',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    CheckboxListTile(
+                      title: const Text('删除我的个人信息'),
+                      value: tempDeletePersonalInfo,
+                      onChanged: (value) {
+                        setDialogState(() {
+                          tempDeletePersonalInfo = value ?? false;
+                        });
+                      },
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    CheckboxListTile(
+                      title: const Text('删除本次对话记录'),
+                      value: tempDeleteConversation,
+                      onChanged: (value) {
+                        setDialogState(() {
+                          tempDeleteConversation = value ?? false;
+                        });
+                      },
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(null),
+                    child: const Text('取消'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop({
+                        'deletePersonalInfo': tempDeletePersonalInfo,
+                        'deleteConversation': tempDeleteConversation,
+                      });
+                    },
+                    child: const Text('确定'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+      
+      if (result == null) return; // 用户取消
+      
+      deletePersonalInfo = result['deletePersonalInfo'] ?? false;
+      deleteConversation = result['deleteConversation'] ?? false;
+    } else {
+      // 不展示数据控制选项，直接确认
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('结束对话'),
+            content: const Text('确定要结束对话吗？'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('取消'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('确定'),
+              ),
+            ],
+          );
+        },
+      );
+      
+      if (confirmed != true) return;
+    }
+
+    // 【实验模式：数据控制选项仅用于声明】
+    // 这两个选项仅用于向用户展示数据控制权，不执行实际的删除操作
+    // 这是实验设计的一部分，用于研究用户对数据控制权的感知
+    if (deletePersonalInfo) {
+      debugPrint('用户选择了删除个人信息选项（仅声明，不实际删除）');
+    }
+    
+    if (deleteConversation) {
+      debugPrint('用户选择了删除对话记录选项（仅声明，不实际删除）');
+    }
+    
+    // 注意：上述选项不会执行任何实际的删除操作
+
+    // 更新实验进度
+    await experimentService.updateProgress(
+      userId: authService.userId!,
+      completedConversation: true,
+    );
+
+    // 跳转到测后问卷页面
+    if (mounted) {
+      Navigator.of(context).pushReplacementNamed('/post-survey');
+    }
+  }
+  
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).primaryColor;
@@ -315,7 +514,8 @@ class _ConversationPageState extends State<ConversationPage> {
         backgroundColor: const Color(0xFF6A1B9A),
         foregroundColor: Colors.white,
         elevation: 1,
-        leading: IconButton(
+        // 实验模式下不显示返回按钮，因为default_chat_page在实验中被隐藏
+        leading: widget.isExperimentMode ? null : IconButton(
           icon: const Icon(Icons.arrow_back_ios),
           onPressed: () {
             // 如果有返回回调，使用回调；否则使用默认的 Navigator.pop
@@ -326,6 +526,8 @@ class _ConversationPageState extends State<ConversationPage> {
             }
           },
         ),
+        // 如果实验模式下没有leading，禁止自动生成返回按钮
+        automaticallyImplyLeading: !widget.isExperimentMode,
         title: Consumer<ChatService>(
           builder: (context, chatService, child) {
             final conversation = chatService.currentConversation;
@@ -351,11 +553,23 @@ class _ConversationPageState extends State<ConversationPage> {
               );
             },
           ),
-          // 新建对话按钮
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline),
-            onPressed: _createNewConversation,
-          ),
+          // 实验模式下显示新建对话和结束按钮，否则显示新建对话按钮
+          if (widget.isExperimentMode) ...[
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              onPressed: _createNewConversation,
+              tooltip: '新建对话',
+            ),
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: _endExperimentConversation,
+              tooltip: '结束对话',
+            ),
+          ] else
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              onPressed: _createNewConversation,
+            ),
         ],
       ),
       body: _isLoading

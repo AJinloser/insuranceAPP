@@ -1,5 +1,6 @@
 from typing import Any
 import traceback
+import random
 
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -7,12 +8,46 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, get_password_hash, verify_password
-from app.core.logging_config import log_error
 from app.db.base import get_db
 from app.models.user import User
 from app.schemas.user import Token, UserCreate, UserLogin, UserResetPassword
 
 router = APIRouter()
+
+
+def generate_experiment_id(db: Session) -> str:
+    """生成唯一的实验ID"""
+    while True:
+        # 获取当前最大的实验ID数字
+        max_user = db.query(User).filter(User.experiment_id.isnot(None)).order_by(User.experiment_id.desc()).first()
+        if max_user and max_user.experiment_id:
+            try:
+                # 提取数字部分
+                num = int(max_user.experiment_id.replace("EXP", ""))
+                new_num = num + 1
+            except:
+                new_num = 1
+        else:
+            new_num = 1
+        
+        exp_id = f"EXP{new_num:03d}"
+        
+        # 检查是否已存在
+        existing = db.query(User).filter(User.experiment_id == exp_id).first()
+        if not existing:
+            return exp_id
+
+
+def generate_group_code() -> str:
+    """随机生成5位二进制分组代码
+    每一位代表一个实验维度：
+    - 第1位: 算法透明度 (0=不展示, 1=展示算法声明)
+    - 第2位: 利益立场声明 (0=不展示, 1=展示利益立场声明)
+    - 第3位: 隐私透明度 (0=不展示, 1=展示隐私声明)
+    - 第4位: 数据控制权 (0=不展示, 1=展示数据控制选项)
+    - 第5位: 步进问题引导 (0=无引导chatbot, 1=有引导chatbot)
+    """
+    return ''.join([str(random.randint(0, 1)) for _ in range(5)])
 
 
 @router.post("/login", response_model=Token)
@@ -23,14 +58,6 @@ def login(
     try:
         user = db.query(User).filter(User.account == form_data.username).first()
         if not user or not verify_password(form_data.password, user.password):
-            # 记录登录失败日志
-            log_error(
-                message=f"登录失败: 账号 {form_data.username} 认证失败",
-                error_type="AUTH_ERROR",
-                api_endpoint="/api/v1/login",
-                account=form_data.username,
-                reason="invalid_credentials"
-            )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="账号或密码错误",
@@ -42,18 +69,17 @@ def login(
         return {
             "access_token": access_token,
             "token_type": "bearer",
-            "user_id": user.user_id
+            "user_id": user.user_id,
+            "experiment_id": user.experiment_id,
+            "group_code": user.group_code,
+            "completed_pre_survey": user.completed_pre_survey or False,
+            "completed_declaration": user.completed_declaration or False,
+            "completed_conversation": user.completed_conversation or False,
+            "completed_post_survey": user.completed_post_survey or False,
         }
     except HTTPException:
         raise
     except Exception as e:
-        log_error(
-            message=f"登录过程中发生错误: {str(e)}",
-            error_type="AUTH_ERROR",
-            api_endpoint="/api/v1/login",
-            stack_trace=traceback.format_exc(),
-            account=form_data.username
-        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="登录服务暂时不可用"
@@ -67,22 +93,26 @@ def register(*, db: Session = Depends(get_db), user_in: UserCreate) -> Any:
         # 检查用户是否已存在
         user = db.query(User).filter(User.account == user_in.account).first()
         if user:
-            log_error(
-                message=f"注册失败: 账号 {user_in.account} 已存在",
-                error_type="AUTH_ERROR",
-                api_endpoint="/api/v1/register",
-                account=user_in.account,
-                reason="account_exists"
-            )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="该账号已被注册",
             )
         # 创建新用户
         hashed_password = get_password_hash(user_in.password)
+        
+        # 生成实验ID和分组代码
+        experiment_id = generate_experiment_id(db)
+        group_code = generate_group_code()
+        
         db_user = User(
             account=user_in.account,
             password=hashed_password,
+            experiment_id=experiment_id,
+            group_code=group_code,
+            completed_pre_survey=False,
+            completed_declaration=False,
+            completed_conversation=False,
+            completed_post_survey=False,
         )
         db.add(db_user)
         db.commit()
@@ -95,18 +125,17 @@ def register(*, db: Session = Depends(get_db), user_in: UserCreate) -> Any:
         return {
             "access_token": access_token,
             "token_type": "bearer",
-            "user_id": db_user.user_id
+            "user_id": db_user.user_id,
+            "experiment_id": db_user.experiment_id,
+            "group_code": db_user.group_code,
+            "completed_pre_survey": False,
+            "completed_declaration": False,
+            "completed_conversation": False,
+            "completed_post_survey": False,
         }
     except HTTPException:
         raise
     except Exception as e:
-        log_error(
-            message=f"用户注册过程中发生错误: {str(e)}",
-            error_type="AUTH_ERROR", 
-            api_endpoint="/api/v1/register",
-            stack_trace=traceback.format_exc(),
-            account=user_in.account
-        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="注册服务暂时不可用"
@@ -121,13 +150,6 @@ def reset_password(
     try:
         user = db.query(User).filter(User.account == reset_data.account).first()
         if not user:
-            log_error(
-                message=f"重置密码失败: 账号 {reset_data.account} 不存在",
-                error_type="AUTH_ERROR",
-                api_endpoint="/api/v1/reset_password",
-                account=reset_data.account,
-                reason="user_not_found"
-            )
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="用户不存在",
@@ -146,19 +168,17 @@ def reset_password(
         return {
             "access_token": access_token,
             "token_type": "bearer", 
-            "user_id": user.user_id
+            "user_id": user.user_id,
+            "experiment_id": user.experiment_id,
+            "group_code": user.group_code,
+            "completed_pre_survey": user.completed_pre_survey or False,
+            "completed_declaration": user.completed_declaration or False,
+            "completed_conversation": user.completed_conversation or False,
+            "completed_post_survey": user.completed_post_survey or False,
         }
     except HTTPException:
         raise
     except Exception as e:
-        log_error(
-            message=f"重置密码过程中发生错误: {str(e)}",
-            error_type="AUTH_ERROR",
-            api_endpoint="/api/v1/reset_password",
-            user_id=user.user_id if 'user' in locals() and user else None,
-            stack_trace=traceback.format_exc(),
-            account=reset_data.account
-        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="重置密码服务暂时不可用"

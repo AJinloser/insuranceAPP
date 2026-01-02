@@ -38,6 +38,7 @@ class _DeveloperPageState extends State<DeveloperPage> {
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
+        automaticallyImplyLeading: false, // 隐藏默认的返回按钮
         actions: [
           Consumer<DeveloperService>(
             builder: (context, developerService, child) {
@@ -63,6 +64,7 @@ class _DeveloperPageState extends State<DeveloperPage> {
                   onFilterChanged: ({
                     List<String>? selectedUserIds,
                     List<String>? selectedAppKeys,
+                    List<String>? selectedExperimentIds,
                     DateTime? startTime,
                     DateTime? endTime,
                     String? keyword,
@@ -72,6 +74,7 @@ class _DeveloperPageState extends State<DeveloperPage> {
                     _currentFilterParams = {
                       'selectedUserIds': selectedUserIds,
                       'selectedAppKeys': selectedAppKeys,
+                      'selectedExperimentIds': selectedExperimentIds,
                       'startTime': startTime,
                       'endTime': endTime,
                       'keyword': keyword,
@@ -282,7 +285,7 @@ class _DeveloperPageState extends State<DeveloperPage> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('退出开发者模式'),
-          content: const Text('确定要退出开发者模式吗？'),
+          content: const Text('确定要退出开发者模式吗？退出后将返回登录页面。'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -292,7 +295,8 @@ class _DeveloperPageState extends State<DeveloperPage> {
               onPressed: () {
                 Navigator.of(context).pop(); // 关闭对话框
                 developerService.exitDeveloperMode();
-                Navigator.of(context).pop(); // 返回上一页
+                // 返回登录页面：清空所有导航栈并返回根页面
+                Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
               },
               child: const Text('确定'),
             ),

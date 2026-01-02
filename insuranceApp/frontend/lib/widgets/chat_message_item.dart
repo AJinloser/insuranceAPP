@@ -6,8 +6,9 @@ import '../models/insurance_product.dart';
 import '../models/goal_suggestion.dart';
 import '../services/settings_service.dart';
 import '../services/goal_suggestion_service.dart';
-import '../widgets/insurance_product_card.dart';
-import '../widgets/goal_suggestion_card.dart';
+// 【实验模式：注释内容检查】不再需要这些卡片组件
+// import '../widgets/insurance_product_card.dart';
+// import '../widgets/goal_suggestion_card.dart';
 import '../widgets/custom_markdown_body.dart';
 
 /// 聊天消息项组件
@@ -174,48 +175,49 @@ class ChatMessageItem extends StatelessWidget {
         List<Widget> additionalWidgets = [];
         
         if (shouldParseJsonContent) {
-          debugPrint('开始解析完整消息内容 (长度: ${answer.length})');
+          // 【实验模式：注释内容检查】不解析目标建议和保险产品
+          // debugPrint('开始解析完整消息内容 (长度: ${answer.length})');
           
-          // 处理目标建议 - 使用简化后的检测逻辑
-          if (settingsService.goalJsonDetectionEnabled) {
-            final goalSuggestions = GoalSuggestionSet.fromMarkdown(answer);
-            if (goalSuggestions.isNotEmpty) {
-              debugPrint('识别到${goalSuggestions.length}个目标建议集合');
-              additionalWidgets.add(
-                GoalSuggestionCardList(
-                  suggestionSets: goalSuggestions,
-                  onAccept: (suggestionSet) => _handleGoalSuggestionAccept(context, suggestionSet),
-                  onReject: (suggestionSet) => _handleGoalSuggestionReject(context, suggestionSet),
-                )
-              );
-            }
-          }
+          // 【实验模式：注释内容检查】处理目标建议 - 使用简化后的检测逻辑
+          // if (settingsService.goalJsonDetectionEnabled) {
+          //   final goalSuggestions = GoalSuggestionSet.fromMarkdown(answer);
+          //   if (goalSuggestions.isNotEmpty) {
+          //     debugPrint('识别到${goalSuggestions.length}个目标建议集合');
+          //     additionalWidgets.add(
+          //       GoalSuggestionCardList(
+          //         suggestionSets: goalSuggestions,
+          //         onAccept: (suggestionSet) => _handleGoalSuggestionAccept(context, suggestionSet),
+          //         onReject: (suggestionSet) => _handleGoalSuggestionReject(context, suggestionSet),
+          //       )
+          //     );
+          //   }
+          // }
           
-          // 处理保险产品
-          if (settingsService.insuranceJsonDetectionEnabled) {
-            final products = InsuranceProduct.fromMarkdown(answer);
-            if (products.isNotEmpty) {
-              debugPrint('识别到${products.length}个保险产品');
-              additionalWidgets.add(
-                InsuranceProductCardList(
-                  products: products,
-                  onProductSelected: onProductSelected,
-                )
-              );
-            }
-          }
+          // 【实验模式：注释内容检查】处理保险产品
+          // if (settingsService.insuranceJsonDetectionEnabled) {
+          //   final products = InsuranceProduct.fromMarkdown(answer);
+          //   if (products.isNotEmpty) {
+          //     debugPrint('识别到${products.length}个保险产品');
+          //     additionalWidgets.add(
+          //       InsuranceProductCardList(
+          //         products: products,
+          //         onProductSelected: onProductSelected,
+          //       )
+          //     );
+          //   }
+          // }
           
-          // 如果找到了内容，清理文本中的JSON内容
-          if (additionalWidgets.isNotEmpty) {
-            // 移除完整的JSON格式内容
-            textContent = textContent.replaceAll(RegExp(r'\{\s*"answer"\s*:\s*\{.*?\}\s*\}'), '');
-            
-            // 移除JSON代码块
-            textContent = textContent.replaceAll(RegExp(r'```json\s*[\s\S]*?\s*```'), '');
-            
-            // 移除多余的空行
-            textContent = textContent.replaceAll(RegExp(r'\n{3,}'), '\n\n');
-          }
+          // 【实验模式：注释内容检查】如果找到了内容，清理文本中的JSON内容
+          // if (additionalWidgets.isNotEmpty) {
+          //   // 移除完整的JSON格式内容
+          //   textContent = textContent.replaceAll(RegExp(r'\{\s*"answer"\s*:\s*\{.*?\}\s*\}'), '');
+          //   
+          //   // 移除JSON代码块
+          //   textContent = textContent.replaceAll(RegExp(r'```json\s*[\s\S]*?\s*```'), '');
+          //   
+          //   // 移除多余的空行
+          //   textContent = textContent.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+          // }
         }
         
         // 构建最终的内容

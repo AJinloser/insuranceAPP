@@ -16,7 +16,6 @@ import 'api_service.dart';
 import 'auth_service.dart';
 import '../models/stream_models.dart';
 import 'stream_service.dart';
-import '../utils/error_logger.dart';
 
 /// 聊天服务类
 /// 管理聊天相关状态和操作
@@ -122,12 +121,6 @@ class ChatService with ChangeNotifier {
       }
     } catch (e) {
       // 记录获取用户ID错误
-      await logChatError(
-        message: '获取用户ID失败: $e',
-        serviceName: 'ChatService',
-        stackTrace: e.toString(),
-      );
-      
       // 出错时使用临时ID
       _userId = const Uuid().v4();
       debugPrint('===> 获取用户ID出错: $e，使用临时ID: $_userId');
@@ -144,12 +137,6 @@ class ChatService with ChangeNotifier {
       await _loadAIModulesFromBackend();
     } catch (e) {
       // 记录加载AI模块错误
-      await logChatError(
-        message: '加载AI模块失败: $e',
-        userId: _userId,
-        serviceName: 'ChatService',
-        stackTrace: e.toString(),
-      );
       
       debugPrint('===> 加载AI模块时出错: $e');
     } finally {
@@ -210,12 +197,6 @@ class ChatService with ChangeNotifier {
       }
     } catch (e) {
       // 记录从后端加载AI模块错误
-      await logChatError(
-        message: '从后端加载AI模块失败: $e',
-        userId: _userId,
-        serviceName: 'ChatService',
-        stackTrace: e.toString(),
-      );
       
       debugPrint('===> 从后端加载AI模块时出错: $e');
     }
@@ -259,12 +240,6 @@ class ChatService with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      await logChatError(
-        message: '加载模块参数失败: $e',
-        userId: _userId,
-        serviceName: 'ChatService',
-        stackTrace: e.toString(),
-      );
       print('加载模块参数失败: $e');
     }
   }
@@ -291,12 +266,6 @@ class ChatService with ChangeNotifier {
       
       notifyListeners();
     } catch (e) {
-      await logChatError(
-        message: '选择AI模块失败: $e',
-        userId: _userId,
-        serviceName: 'ChatService',
-        stackTrace: e.toString(),
-      );
       debugPrint('Error selecting AI module: $e');
     } finally {
       _setLoading(false);
@@ -316,12 +285,6 @@ class ChatService with ChangeNotifier {
       debugPrint('===> 加载到${_conversations.length}个会话');
       notifyListeners();
     } catch (e) {
-      await logChatError(
-        message: '加载会话列表失败: $e',
-        userId: _userId,
-        serviceName: 'ChatService',
-        stackTrace: e.toString(),
-      );
       debugPrint('Error loading conversations: $e');
     } finally {
       _setLoading(false);
@@ -356,12 +319,6 @@ class ChatService with ChangeNotifier {
       await loadMessages();
       notifyListeners();
     } catch (e) {
-      await logChatError(
-        message: '加载会话失败: $e',
-        userId: _userId,
-        serviceName: 'ChatService',
-        stackTrace: e.toString(),
-      );
       debugPrint('Error loading conversation: $e');
     } finally {
       _setLoading(false);
@@ -410,12 +367,6 @@ class ChatService with ChangeNotifier {
       
       notifyListeners();
     } catch (e) {
-      await logChatError(
-        message: '加载消息历史失败: $e',
-        userId: _userId,
-        serviceName: 'ChatService',
-        stackTrace: e.toString(),
-      );
       debugPrint('Error loading messages: $e');
     } finally {
       _setLoading(false);
@@ -431,12 +382,6 @@ class ChatService with ChangeNotifier {
       );
       notifyListeners();
     } catch (e) {
-      await logChatError(
-        message: '加载建议问题失败: $e',
-        userId: _userId,
-        serviceName: 'ChatService',
-        stackTrace: e.toString(),
-      );
       debugPrint('Error loading suggested questions: $e');
     }
   }
@@ -627,12 +572,6 @@ class ChatService with ChangeNotifier {
       
     } catch (e) {
       debugPrint('发送消息错误: $e');
-      await logChatError(
-        message: '发送消息错误: $e',
-        userId: _userId,
-        serviceName: 'ChatService',
-        stackTrace: e.toString(),
-      );
       
       // 确保在错误情况下也更新UI（如果没有被取消）
       if (!_isStreamCancelled) {
@@ -697,12 +636,6 @@ class ChatService with ChangeNotifier {
         await _currentStreamSubscription!.cancel();
         debugPrint('===> 流订阅已取消');
       } catch (e) {
-        await logChatError(
-          message: '取消流订阅时出错: $e',
-          userId: _userId,
-          serviceName: 'ChatService',
-          stackTrace: e.toString(),
-        );
         debugPrint('===> 取消流订阅时出错: $e');
       } finally {
         _currentStreamSubscription = null;
@@ -727,12 +660,6 @@ class ChatService with ChangeNotifier {
         
         _currentTaskId = null;
       } catch (e) {
-        await logChatError(
-          message: '停止API请求出错: $e',
-          userId: _userId,
-          serviceName: 'ChatService',
-          stackTrace: e.toString(),
-        );
         debugPrint('===> 停止API请求出错: $e');
         // 即使API请求失败，也要清除taskId，避免状态不一致
         _currentTaskId = null;
@@ -773,12 +700,6 @@ class ChatService with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      await logChatError(
-        message: '发送反馈失败: $e',
-        userId: _userId,
-        serviceName: 'ChatService',
-        stackTrace: e.toString(),
-      );
       debugPrint('Error sending feedback: $e');
     }
   }
@@ -802,12 +723,6 @@ class ChatService with ChangeNotifier {
       
       notifyListeners();
     } catch (e) {
-      await logChatError(
-        message: '删除会话失败: $e',
-        userId: _userId,
-        serviceName: 'ChatService',
-        stackTrace: e.toString(),
-      );
       debugPrint('Error deleting conversation: $e');
     }
   }
@@ -835,12 +750,6 @@ class ChatService with ChangeNotifier {
       
       notifyListeners();
     } catch (e) {
-      await logChatError(
-        message: '重命名会话失败: $e',
-        userId: _userId,
-        serviceName: 'ChatService',
-        stackTrace: e.toString(),
-      );
       debugPrint('Error renaming conversation: $e');
     }
   }
@@ -933,18 +842,6 @@ class ChatService with ChangeNotifier {
       return selectedModule!.parameters!.suggestedQuestions!;
     }
     return [];
-  }
-
-  /// 处理目标建议接受
-  Future<void> _handleGoalSuggestionAccept(Map<String, dynamic> suggestionData) async {
-    // TODO: 实现目标建议接受逻辑
-    debugPrint('接受目标建议: $suggestionData');
-  }
-
-  /// 处理目标建议拒绝
-  void _handleGoalSuggestionReject(Map<String, dynamic> suggestionData) {
-    // TODO: 实现目标建议拒绝逻辑
-    debugPrint('拒绝目标建议: $suggestionData');
   }
   
   /// 清理资源

@@ -8,6 +8,9 @@ import 'pages/home_page.dart';
 import 'pages/menu_page.dart';
 import 'pages/profile_setup_page.dart';
 import 'pages/user_insurance_list_page.dart';
+import 'pages/pre_survey_page.dart';
+import 'pages/declaration_page.dart';
+import 'pages/post_survey_page.dart';
 import 'screens/login_screen.dart';
 import 'services/auth_service.dart';
 import 'services/chat_service.dart';
@@ -17,8 +20,7 @@ import 'services/user_info_service.dart';
 import 'services/goal_service.dart';
 import 'services/settings_service.dart';
 import 'services/developer_service.dart';
-import 'utils/error_logger.dart';
-import 'utils/global_error_handler.dart';
+import 'services/experiment_service.dart';
 
 // 全局RouteObserver
 final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
@@ -26,32 +28,12 @@ final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // 初始化全局错误处理器
-  GlobalErrorHandler.init();
-  
-  // 初始化错误日志记录器
-  try {
-    await ErrorLogger.instance.init();
-    debugPrint("===> ErrorLogger初始化成功");
-    
-    // 清理旧日志文件
-    await ErrorLogger.instance.cleanOldLogs();
-  } catch (e) {
-    debugPrint("===> ErrorLogger初始化失败: $e");
-  }
-  
   // 加载环境变量文件
   try {
     await dotenv.load(fileName: ".env");
     debugPrint("===> 成功加载.env文件");
   } catch (e) {
     debugPrint("===> 加载.env文件失败: $e");
-    // 记录环境变量加载错误
-    await logServiceError(
-      message: '加载.env文件失败: $e',
-      serviceName: 'main',
-      stackTrace: e.toString(),
-    );
   }
   
   // 初始化认证服务
@@ -89,6 +71,9 @@ void main() async {
   // 初始化开发者服务
   final developerService = DeveloperService();
   
+  // 初始化实验服务
+  final experimentService = ExperimentService();
+  
   runApp(
     MultiProvider(
       providers: [
@@ -99,6 +84,7 @@ void main() async {
         ChangeNotifierProvider.value(value: goalService),
         ChangeNotifierProvider.value(value: settingsService),
         ChangeNotifierProvider.value(value: developerService),
+        ChangeNotifierProvider.value(value: experimentService),
         ChangeNotifierProxyProvider<AuthService, UserInfoService>(
           create: (context) => UserInfoService(authService),
           update: (context, auth, previous) => previous ?? UserInfoService(auth),
@@ -226,34 +212,102 @@ class MyApp extends StatelessWidget {
           );
         }
         
+        // 实验流程路由
+        if (settings.name == '/pre-survey') {
+          return MaterialPageRoute(
+            builder: (context) => const PreSurveyPage(),
+          );
+        }
+        
+        if (settings.name == '/declaration') {
+          return MaterialPageRoute(
+            builder: (context) => const DeclarationPage(),
+          );
+        }
+        
+        if (settings.name == '/experiment-conversation') {
+          return MaterialPageRoute(
+            builder: (context) => const ConversationPage(isExperimentMode: true),
+          );
+        }
+        
+        if (settings.name == '/post-survey') {
+          return MaterialPageRoute(
+            builder: (context) => const PostSurveyPage(),
+          );
+        }
+        
         return null;
       },
-      home: Consumer<AuthService>(
-        builder: (context, authService, child) {
-          debugPrint('===> MaterialApp: AuthStatus = ${authService.authStatus}, isNewUser = ${authService.isNewUser}, shouldShowProfile = ${authService.shouldShowProfile}');
+      home: Consumer2<AuthService, ExperimentService>(
+        builder: (context, authService, experimentService, child) {
+          debugPrint('===> MaterialApp home: builder被调用');
+          debugPrint('===> MaterialApp home: AuthStatus = ${authService.authStatus}, isNewUser = ${authService.isNewUser}, shouldShowProfile = ${authService.shouldShowProfile}');
           
           switch (authService.authStatus) {
             case AuthStatus.authenticated:
-              // 如果是新注册的用户，显示个人信息初始化页面
+              debugPrint('===> MaterialApp home: 状态=authenticated');
+              // 如果是新注册的用户,进入实验流程
               if (authService.isNewUser) {
-                debugPrint('===> MaterialApp: 显示个人信息初始化页面');
-                return const ProfileSetupPage();
-              }
-              // 如果应该显示个人中心，则显示个人中心标签页
-              if (authService.shouldShowProfile) {
-                debugPrint('===> MaterialApp: 显示个人中心页面');
-                // 重置标志，避免重复显示
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  authService.resetShowProfile();
+                debugPrint('===> MaterialApp home: 新用户,加载实验信息');
+                // 加载实验信息
+                WidgetsBinding.instance.addPostFrameCallback((_) async {
+                  await experimentService.getExperimentInfo(authService.userId!);
+                  if (context.mounted) {
+                    // 跳转到测前问卷页面
+                    Navigator.of(context).pushReplacementNamed('/pre-survey');
+                  }
                 });
-                return const HomePage(initialTabIndex: 3); // 3对应个人中心标签页
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
               }
-              // 否则显示主页
-              debugPrint('===> MaterialApp: 显示主页');
-              return const HomePage();
+              
+              // 对于已有用户,检查实验进度
+              if (authService.userId != null) {
+                debugPrint('===> MaterialApp home: 已有用户，userId=${authService.userId}');
+                // 加载实验信息
+                WidgetsBinding.instance.addPostFrameCallback((_) async {
+                  final info = await experimentService.getExperimentInfo(authService.userId!);
+                  if (info != null && context.mounted) {
+                    debugPrint('===> MaterialApp home: 实验进度 - 测前:${info.completedPreSurvey}, 声明:${info.completedDeclaration}, 对话:${info.completedConversation}, 测后:${info.completedPostSurvey}');
+                    
+                    // 根据实验进度跳转到对应页面
+                    if (!info.completedPreSurvey) {
+                      debugPrint('===> MaterialApp home: 跳转到测前问卷');
+                      Navigator.of(context).pushReplacementNamed('/pre-survey');
+                    } else if (!info.completedDeclaration) {
+                      debugPrint('===> MaterialApp home: 跳转到声明页面');
+                      Navigator.of(context).pushReplacementNamed('/declaration');
+                    } else if (!info.completedConversation) {
+                      debugPrint('===> MaterialApp home: 跳转到实验对话');
+                      Navigator.of(context).pushReplacementNamed('/experiment-conversation');
+                    } else if (!info.completedPostSurvey) {
+                      debugPrint('===> MaterialApp home: 跳转到测后问卷');
+                      Navigator.of(context).pushReplacementNamed('/post-survey');
+                    } else {
+                      // 如果全部完成，允许用户继续使用实验对话页面
+                      debugPrint('===> MaterialApp home: 实验已全部完成，进入对话页面');
+                      Navigator.of(context).pushReplacementNamed('/experiment-conversation');
+                    }
+                  }
+                });
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+              
+              // 默认显示加载中
+              debugPrint('===> MaterialApp home: authenticated但userId为null，显示加载中');
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+              
             case AuthStatus.unauthenticated:
+              debugPrint('===> MaterialApp home: 状态=unauthenticated，显示登录页面');
+              return const LoginScreen();
             case AuthStatus.unknown:
-              debugPrint('===> MaterialApp: 显示登录页面');
+              debugPrint('===> MaterialApp home: 状态=unknown，显示登录页面');
               return const LoginScreen();
           }
         },

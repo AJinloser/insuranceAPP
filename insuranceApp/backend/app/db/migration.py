@@ -150,6 +150,7 @@ class DatabaseMigration:
             (1, "添加目标管理表", self.migrate_to_v1),
             (2, "优化目标数据结构", self.migrate_to_v2),
             (3, "添加用户信息新字段", self.migrate_to_v3),
+            (4, "添加实验平台相关字段", self.migrate_to_v4),
             # 在这里添加更多迁移...
         ]
         
@@ -194,6 +195,33 @@ class DatabaseMigration:
         
         # 如果需要，可以在这里执行数据结构迁移
         # self.migrate_jsonb_data('user_info', 'user_info', old_structure, new_structure)
+    
+    def migrate_to_v4(self):
+        """迁移到版本4：添加实验平台相关字段"""
+        logger.info("开始添加实验平台相关字段...")
+        
+        # 1. 实验ID字段（唯一）
+        self.add_column_if_not_exists('users', 'experiment_id', 'VARCHAR UNIQUE')
+        
+        # 如果字段刚添加，创建索引
+        if not self.column_exists('users', 'experiment_id'):
+            try:
+                with self.engine.begin() as conn:
+                    conn.execute(text("CREATE INDEX IF NOT EXISTS idx_users_experiment_id ON users(experiment_id)"))
+                logger.info("为experiment_id创建索引")
+            except Exception as e:
+                logger.warning(f"创建索引失败（可能已存在）: {e}")
+        
+        # 2. 分组代码字段
+        self.add_column_if_not_exists('users', 'group_code', 'VARCHAR')
+        
+        # 3. 实验进度字段
+        self.add_column_if_not_exists('users', 'completed_pre_survey', 'BOOLEAN DEFAULT FALSE')
+        self.add_column_if_not_exists('users', 'completed_declaration', 'BOOLEAN DEFAULT FALSE')
+        self.add_column_if_not_exists('users', 'completed_conversation', 'BOOLEAN DEFAULT FALSE')
+        self.add_column_if_not_exists('users', 'completed_post_survey', 'BOOLEAN DEFAULT FALSE')
+        
+        logger.info("✓ 实验平台相关字段添加完成")
     
     def backup_table(self, table_name: str):
         """备份表数据"""
